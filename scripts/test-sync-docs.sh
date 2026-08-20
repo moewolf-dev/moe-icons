@@ -115,6 +115,18 @@ else
 fi
 assert_exists "safe-fail: target index.md still present after failures" "$DEST/index.md"
 
+echo "== target without a pro/ directory (matches a fresh website checkout) =="
+NOPRO="$TMP/nopro"
+mkdir -p "$NOPRO/docs/.vitepress" "$NOPRO/docs/src"
+echo '{}' > "$NOPRO/package.json"
+echo 'export default {}' > "$NOPRO/docs/.vitepress/config.ts"
+if "$SYNC" "$SRC" "$NOPRO" >/dev/null 2>&1; then
+  ok "no-pro: sync succeeds when target has no pro/ dir"
+else
+  bad "no-pro: sync failed on target without pro/ dir"
+fi
+assert_exists "no-pro: index.md synced" "$NOPRO/docs/src/index.md"
+
 echo ""
 echo "pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]

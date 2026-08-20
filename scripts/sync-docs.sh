@@ -66,14 +66,27 @@ fi
 DEST="$CHECKOUT/docs/src"
 mkdir -p "$DEST"
 
+# Portable SHA-256 checksum (present on both Linux runners and macOS).
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
 # Record protected state before syncing.
 vitepress_checksum() {
-  shasum -a 256 "$CHECKOUT/docs/.vitepress/config.ts" 2>/dev/null | awk '{print $1}'
+  sha256 "$CHECKOUT/docs/.vitepress/config.ts"
 }
 pro_checksum() {
-  find "$DEST/pro" -type f 2>/dev/null | sort | while IFS= read -r f; do
-    shasum -a 256 "$f"
-  done
+  # Tolerate a missing pro/ directory: emit nothing and succeed instead of
+  # failing the caller under `set -e`.
+  if [ -d "$DEST/pro" ]; then
+    find "$DEST/pro" -type f | sort | while IFS= read -r f; do
+      sha256 "$f"
+    done
+  fi
 }
 
 VITEPRESS_BEFORE="$(vitepress_checksum)"
