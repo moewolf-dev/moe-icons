@@ -47,6 +47,18 @@ jobs:
           SSH_KEY_FILE="$RUNNER_TEMP/deploy_key"
           install -m 600 /dev/null "$SSH_KEY_FILE"
           printf '%s\n' "$DEPLOY_KEY" > "$SSH_KEY_FILE"
+          # Validate the private key parses and matches the website deploy key
+          # before attempting any network operation. Never print the key itself.
+          if ! ssh-keygen -y -f "$SSH_KEY_FILE" > "$RUNNER_TEMP/derived.pub" 2> "$RUNNER_TEMP/sshkeygen.err"; then
+            echo "error: DEPLOY_KEY is not a valid private key: $(cat "$RUNNER_TEMP/sshkeygen.err")" >&2
+            exit 1
+          fi
+          FINGERPRINT="$(ssh-keygen -lf "$RUNNER_TEMP/derived.pub" | awk '{print $2}')"
+          EXPECTED="SHA256:K1paKAuHxqMXi5yzUstrvwG5Uc9fL9W+DePHMzSyKak"
+          if [ "$FINGERPRINT" != "$EXPECTED" ]; then
+            echo "error: DEPLOY_KEY fingerprint ${FINGERPRINT} does not match the website deploy key ${EXPECTED}" >&2
+            exit 1
+          fi
           mkdir -p ~/.ssh
           # Pin GitHub's SSH host key (ed25519) instead of trusting a runtime
           # ssh-keyscan. If GitHub ever rotates it, update from the official
