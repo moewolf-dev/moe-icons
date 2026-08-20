@@ -16,7 +16,17 @@ CHECKOUT_ARG="${2:-}"
 [ -n "$SRC_ARG" ] || usage
 [ -n "$CHECKOUT_ARG" ] || usage
 
-# Resolve to absolute paths before validating anything.
+# Validate that both directories exist before resolving absolute paths, so a
+# missing path produces a clear error instead of a shell `cd` failure.
+if [ ! -d "$SRC_ARG" ]; then
+  echo "error: source docs dir does not exist: $SRC_ARG" >&2
+  exit 1
+fi
+if [ ! -d "$CHECKOUT_ARG" ]; then
+  echo "error: target checkout dir does not exist: $CHECKOUT_ARG" >&2
+  exit 1
+fi
+
 SRC="$(cd "$SRC_ARG" && pwd)"
 CHECKOUT="$(cd "$CHECKOUT_ARG" && pwd)"
 
@@ -36,11 +46,7 @@ if [ -e "$SRC/.git" ]; then
   exit 1
 fi
 
-# Source must exist and contain index.md.
-if [ ! -d "$SRC" ]; then
-  echo "error: source docs dir does not exist: $SRC" >&2
-  exit 1
-fi
+# Source must contain index.md.
 if [ ! -f "$SRC/index.md" ]; then
   echo "error: source docs dir is missing index.md: $SRC" >&2
   exit 1
