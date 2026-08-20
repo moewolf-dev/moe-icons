@@ -67,8 +67,11 @@ jobs:
           cat >> ~/.ssh/known_hosts <<'EOF'
           github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
           EOF
-          # Persist the SSH command for subsequent steps (clone/push).
-          echo "GIT_SSH_COMMAND=ssh -i $SSH_KEY_FILE -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
+          # Export the SSH command so the clone in this same step uses the key,
+          # and persist it so the later push step uses it too.
+          SSH_COMMAND="ssh -i $SSH_KEY_FILE -o IdentitiesOnly=yes"
+          export GIT_SSH_COMMAND="$SSH_COMMAND"
+          echo "GIT_SSH_COMMAND=$SSH_COMMAND" >> "$GITHUB_ENV"
           git clone --depth 1 --branch main \
             git@github.com:moewolf-dev/moe-icons-website.git \
             "$RUNNER_TEMP/website"
