@@ -1,0 +1,82 @@
+name: Sync public docs to private website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/sync-docs.sh'
+      - '.github/workflows/sync-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check docs
+        run: npm run docs:check
+
+      - name: Build docs
+        run: npm run docs:build
+
+      - name: Setup SSH deploy key and clone private website
+        env:
+          DEPLOY_KEY: ${{ secrets.PRIVATE_WEBSITE_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          SSH_KEY_FILE="$RUNNER_TEMP/deploy_key"
+          install -m 600 /dev/null "$SSH_KEY_FILE"
+          printf '%s\n' "$DEPLOY_KEY" > "$SSH_KEY_FILE"
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          # Persist the SSH command for subsequent steps (clone/push).
+          echo "GIT_SSH_COMMAND=ssh -i $SSH_KEY_FILE -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
+          git clone --depth 1 --branch main \
+            git@github.com:moewolf-dev/moe-icons-website.git \
+            "$RUNNER_TEMP/website"
+
+      - name: Sync docs into website checkout
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/sync-docs.sh" \
+            "$GITHUB_WORKSPACE/docs" \
+            "$RUNNER_TEMP/website"
+
+      - name: Commit and push sync branch
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/website"
+          git config user.name "moe-icons docs sync"
+          git config user.email "moe-icons-docs-sync[bot]@users.noreply.github.com"
+          git checkout -B docs-sync/public-main
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No documentation changes; nothing to push."
+          else
+            git commit \
+              -m "docs: sync from moe-icons@${GITHUB_SHA::7}" \
+              -m "Public source commit: ${GITHUB_SHA}"
+            # Reset the fixed sync branch from latest private main. Only the
+            # docs-sync/public-main branch is ever pushed, never main.
+            git push --force origin HEAD:docs-sync/public-main
+          fi

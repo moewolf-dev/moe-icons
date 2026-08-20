@@ -67,7 +67,7 @@ jobs:
             exit 1
           fi
           
-          aws s3 sync ./MoeLite/svgs s3://moe-icons-website/version-$RELEASE_TAG/ \
+          aws s3 sync ./icons/MoeLite/svgs s3://moe-icons-website/version-$RELEASE_TAG/ \
             --endpoint-url ${CLOUDFLARE_R2_ENDPOINT} \
             --region ${AWS_REGION} \
             --debug

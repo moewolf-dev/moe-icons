@@ -1,0 +1,15 @@
+{
+  "name": "moe-icons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standard SVG static and dynamic icon library. Public documentation tooling.",
+  "scripts": {
+    "docs:check": "node scripts/docs-check.mjs",
+    "docs:build": "vitepress build docs"
+  },
+  "devDependencies": {
+    "gray-matter": "^4.0.3",
+    "vitepress": "1.4.1"
+  }
+}
