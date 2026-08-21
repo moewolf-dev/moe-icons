@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "Moe icons docs"
-  text: "Docs for Moe icons  "
-  tagline: My great project tagline
+  name: "Moe Icons"
+  text: "免费文档"
+  tagline: Moe Icons SVG 图标库的官方 Free 文档
   actions:
     - theme: brand
       text: Markdown Examples
@@ -15,10 +15,10 @@ hero:
       link: /cn/api-examples
 
 features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: 静态与动态 SVG
+    details: 原生 SVG 图标，静态与动态变体成对关联
+  - title: 框架即用
+    details: 提供 React、Vue 等常见 UI 框架的模板
+  - title: 公开唯一正文源
+    details: Free 文档正文在公开 moe-icons 仓库维护
 ---

@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "Moe icons docs"
-  text: "Docs for Moe icons  "
-  tagline: My great project tagline
+  name: "Moe Icons"
+  text: "Free documentation"
+  tagline: Official Free docs for the Moe Icons SVG library
   actions:
     - theme: brand
       text: Markdown Examples
@@ -15,10 +15,10 @@ hero:
       link: /api-examples
 
 features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: Static and animated SVG
+    details: Native SVG icons with associated static and animated variants
+  - title: Framework ready
+    details: Templates for popular UI frameworks such as React and Vue
+  - title: Single public source
+    details: Free documentation is maintained in the public moe-icons repository
 ---
