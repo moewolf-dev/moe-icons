@@ -21,4 +21,6 @@ features:
     details: Templates for popular UI frameworks such as React and Vue
   - title: Single public source
     details: Free documentation is maintained in the public moe-icons repository
+  - title: Review-first publishing
+    details: Documentation updates are reviewed before they are published to the website
 ---

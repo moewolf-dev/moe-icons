@@ -21,4 +21,6 @@ features:
     details: 提供 React、Vue 等常见 UI 框架的模板
   - title: 公开唯一正文源
     details: Free 文档正文在公开 moe-icons 仓库维护
+  - title: 审核后发布
+    details: 文档更新经过人工审核后才会发布到官网
 ---
