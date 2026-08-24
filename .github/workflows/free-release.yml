@@ -1,0 +1,104 @@
+name: Publish validated free artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      fullVersion:
+        required: true
+        type: string
+      artifactId:
+        required: true
+        type: string
+      descriptorSha256:
+        required: true
+        type: string
+      sourceCommit:
+        required: true
+        type: string
+      generatorCommit:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: free-release-${{ inputs.fullVersion }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: free-release
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate immutable input
+        env:
+          VERSION: ${{ inputs.fullVersion }}
+          ARTIFACT_ID: ${{ inputs.artifactId }}
+          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
+          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-alpha|-beta)?$ ]]
+          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          [[ "$DESCRIPTOR_SHA" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$GENERATOR_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+      - name: Download candidate with read-only source credential
+        env:
+          GH_TOKEN: ${{ secrets.CODE_LIBRARY_ARTIFACT_READ_TOKEN }}
+          ARTIFACT_ID: ${{ inputs.artifactId }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          echo "::add-mask::$GH_TOKEN"
+          mkdir "$RUNNER_TEMP/candidate"
+          gh api "repos/moewolf-dev/moe-icons-code-library/actions/artifacts/${ARTIFACT_ID}/zip" > "$RUNNER_TEMP/candidate.zip"
+          unzip -q "$RUNNER_TEMP/candidate.zip" -d "$RUNNER_TEMP/candidate"
+      - id: validate
+        name: Revalidate descriptor, catalog and archive
+        env:
+          VERSION: ${{ inputs.fullVersion }}
+          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
+          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
+        run: |
+          set -euo pipefail
+          node scripts/validate-free-release.mjs "$RUNNER_TEMP/candidate" "$VERSION" "$DESCRIPTOR_SHA" "$SOURCE_COMMIT" "$GENERATOR_COMMIT" > "$RUNNER_TEMP/validated.json"
+          echo "asset_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
+      - name: Enforce immutable idempotency
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.fullVersion }}
+          EXPECTED_SHA: ${{ steps.validate.outputs.asset_sha }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir "$RUNNER_TEMP/existing"
+          gh release download "$tag" --pattern "moe-icons-free-${VERSION}.tgz" --dir "$RUNNER_TEMP/existing"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/existing/moe-icons-free-${VERSION}.tgz" | awk '{print $1}')"
+          test "$actual" = "$EXPECTED_SHA" || { echo "existing release bytes differ" >&2; exit 1; }
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+      - name: Create immutable free release
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.fullVersion }}
+          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
+        run: |
+          set -euo pipefail
+          gh release create "v${VERSION}" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz.sha256" \
+            "$RUNNER_TEMP/candidate/release-descriptor.json" \
+            --title "Moe Icons free ${VERSION}" \
+            --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}"
