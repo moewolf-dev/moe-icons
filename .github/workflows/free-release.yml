@@ -59,7 +59,7 @@ jobs:
           gh api "repos/moewolf-dev/moe-icons-code-library/actions/artifacts/${ARTIFACT_ID}/zip" > "$RUNNER_TEMP/candidate.zip"
           unzip -q "$RUNNER_TEMP/candidate.zip" -d "$RUNNER_TEMP/candidate"
       - id: validate
-        name: Revalidate descriptor, catalog and archive
+        name: Revalidate descriptor, catalog, archives and metadata
         env:
           VERSION: ${{ inputs.fullVersion }}
           DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
@@ -69,12 +69,14 @@ jobs:
           set -euo pipefail
           node scripts/validate-free-release.mjs "$RUNNER_TEMP/candidate" "$VERSION" "$DESCRIPTOR_SHA" "$SOURCE_COMMIT" "$GENERATOR_COMMIT" > "$RUNNER_TEMP/validated.json"
           echo "asset_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
+          echo "metadata_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).metadata.sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
       - name: Enforce immutable idempotency
         id: existing
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.fullVersion }}
           EXPECTED_SHA: ${{ steps.validate.outputs.asset_sha }}
+          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
         run: |
           set -euo pipefail
           tag="v${VERSION}"
@@ -83,9 +85,12 @@ jobs:
             exit 0
           fi
           mkdir "$RUNNER_TEMP/existing"
-          gh release download "$tag" --pattern "moe-icons-free-${VERSION}.tgz" --dir "$RUNNER_TEMP/existing"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/existing/moe-icons-free-${VERSION}.tgz" | awk '{print $1}')"
-          test "$actual" = "$EXPECTED_SHA" || { echo "existing release bytes differ" >&2; exit 1; }
+          gh release download "$tag" \
+            --pattern "moe-icons-free-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
+            --pattern "release-descriptor.json" \
+            --dir "$RUNNER_TEMP/existing"
+          node scripts/compare-release.mjs "$RUNNER_TEMP/candidate" "$RUNNER_TEMP/existing" "$VERSION" "$DESCRIPTOR_SHA"
           echo "exists=true" >> "$GITHUB_OUTPUT"
       - name: Create immutable free release
         if: steps.existing.outputs.exists != 'true'
@@ -99,6 +104,24 @@ jobs:
           gh release create "v${VERSION}" \
             "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz" \
             "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz.sha256" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz.sha256" \
             "$RUNNER_TEMP/candidate/release-descriptor.json" \
             --title "Moe Icons free ${VERSION}" \
             --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}"
+      - name: Re-read uploaded assets and publish latest descriptor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.fullVersion }}
+          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          mkdir -p "$RUNNER_TEMP/uploaded"
+          gh release download "$tag" \
+            --pattern "moe-icons-free-${VERSION}.tgz" \
+            --pattern "moe-icons-free-metadata-${VERSION}.tgz" \
+            --pattern "release-descriptor.json" \
+            --dir "$RUNNER_TEMP/uploaded"
+          node scripts/write-latest-descriptor.mjs "$RUNNER_TEMP/uploaded" "$VERSION" "$DESCRIPTOR_SHA"
+          gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json" --clobber

@@ -6,7 +6,8 @@
   "description": "Standard SVG static and dynamic icon library. Public documentation tooling.",
   "scripts": {
     "docs:check": "node scripts/docs-check.mjs",
-    "docs:build": "vitepress build docs"
+    "docs:build": "vitepress build docs",
+    "test": "node --test scripts/test-distribution.mjs"
   },
   "devDependencies": {
     "gray-matter": "^4.0.3",
