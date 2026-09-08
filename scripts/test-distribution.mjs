@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -263,5 +263,17 @@ test("R-P0-10: wrong sidecar and extra asset are rejected", async () => {
   } finally {
     rmSync(local, { recursive: true, force: true });
     rmSync(existing, { recursive: true, force: true });
+  }
+});
+
+test("P1-7: public workflows pin every action to a commit", () => {
+  const dir = join(ROOT, ".github", "workflows");
+  for (const name of readdirSync(dir).filter((file) => file.endsWith(".yml"))) {
+    const text = readFileSync(join(dir, name), "utf8");
+    for (const line of text.split("\n")) {
+      const match = /uses:\s*([^\s#]+)/.exec(line);
+      if (!match || match[1].startsWith("./")) continue;
+      assert.match(match[1], /@[0-9a-f]{40}$/, `${name}: ${match[1]}`);
+    }
   }
 });
