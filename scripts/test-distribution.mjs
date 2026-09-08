@@ -195,3 +195,16 @@ test("R8: validate-free-release rejects a candidate with a pro node in the publi
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("P0-8: free-release.yml is draft-first and publishes only after eight assets", () => {
+  const workflow = readFileSync(join(ROOT, ".github", "workflows", "free-release.yml"), "utf8");
+  const draftAt = workflow.indexOf('gh release create "$tag" --draft');
+  const latestAt = workflow.indexOf("write-latest-descriptor.mjs");
+  const countAt = workflow.indexOf('test "$count" = "8"');
+  const publishAt = workflow.indexOf('gh release edit "$tag" --draft=false');
+  assert.ok(draftAt >= 0, "must create a draft release");
+  assert.ok(latestAt > draftAt, "release-latest.json must be written after the draft exists");
+  assert.ok(countAt > latestAt, "must verify eight assets after attaching latest");
+  assert.ok(publishAt > countAt, "must publish only after the full readback");
+  assert.ok(!/gh release create "v\$\{VERSION\}"/.test(workflow), "must not create a published release directly");
+});

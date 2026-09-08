@@ -157,6 +157,12 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # A draft is an in-progress attempt: resume it, do not treat as done.
+          if [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true" ]; then
+            echo "draft Release exists; resuming" >&2
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           mkdir "$RUNNER_TEMP/existing"
           gh release download "$tag" \
             --pattern "moe-icons-free-${VERSION}.tgz*" \
@@ -167,24 +173,38 @@ jobs:
           node scripts/compare-release.mjs "$RUNNER_TEMP/candidate" "$RUNNER_TEMP/existing" "$VERSION" "$DESCRIPTOR_SHA"
           echo "exists=true" >> "$GITHUB_OUTPUT"
 
-      - name: Create immutable free release
+      # P0-8: never expose a published, incomplete Release. Draft first, upload
+      # the seven immutable files, read them back, add release-latest.json, and
+      # only then publish.
+      - name: Create or reuse draft Release
         if: steps.switch.outputs.blocked == '0' && steps.existing.outputs.exists != 'true' && steps.dispatchcheck.outputs.write_allowed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "v${VERSION}" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz.sha256" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-assets-${VERSION}.tgz" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-assets-${VERSION}.tgz.sha256" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz" \
-            "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz.sha256" \
-            "$RUNNER_TEMP/candidate/release-descriptor.json" \
-            --title "Moe Icons free ${VERSION}" \
-            --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}\ncontentHash: see descriptor"
+          tag="v${VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            is_draft="$(gh release view "$tag" --json isDraft --jq .isDraft)"
+            test "$is_draft" = "true" || { echo "$tag is already published; refusing to modify" >&2; exit 1; }
+          else
+            gh release create "$tag" --draft \
+              --title "Moe Icons free ${VERSION}" \
+              --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}\ncontentHash: see descriptor"
+          fi
+          for asset in \
+            "moe-icons-free-${VERSION}.tgz" \
+            "moe-icons-free-${VERSION}.tgz.sha256" \
+            "moe-icons-free-assets-${VERSION}.tgz" \
+            "moe-icons-free-assets-${VERSION}.tgz.sha256" \
+            "moe-icons-free-metadata-${VERSION}.tgz" \
+            "moe-icons-free-metadata-${VERSION}.tgz.sha256" \
+            "release-descriptor.json"; do
+            if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx "$asset"; then
+              gh release upload "$tag" "$RUNNER_TEMP/candidate/$asset"
+            fi
+          done
 
-      - name: Re-read uploaded assets and publish latest descriptor
+      - name: Re-read draft assets and attach release-latest.json
         if: steps.switch.outputs.blocked == '0' && steps.dispatchcheck.outputs.write_allowed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -192,14 +212,32 @@ jobs:
           set -euo pipefail
           tag="v${VERSION}"
           mkdir -p "$RUNNER_TEMP/uploaded"
-          gh release download "$tag" \
-            --pattern "moe-icons-free-${VERSION}.tgz" \
-            --pattern "moe-icons-free-assets-${VERSION}.tgz" \
-            --pattern "moe-icons-free-metadata-${VERSION}.tgz" \
+          gh release download "$tag" --clobber \
+            --pattern "moe-icons-free-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/uploaded"
+          # Recompute every uploaded digest from the Release itself.
+          node scripts/validate-free-release.mjs "$RUNNER_TEMP/uploaded" "$VERSION" "$DESCRIPTOR_SHA" "$SOURCE_COMMIT" "$GENERATOR_COMMIT" >/dev/null
           node scripts/write-latest-descriptor.mjs "$RUNNER_TEMP/uploaded" "$VERSION" "$DESCRIPTOR_SHA"
-          gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json" --clobber
+          if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx 'release-latest.json'; then
+            gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json"
+          fi
+          count="$(gh release view "$tag" --json assets --jq '.assets | length')"
+          test "$count" = "8" || { echo "expected 8 assets on the draft, got $count" >&2; exit 1; }
+
+      - name: Publish the validated Release
+        if: steps.switch.outputs.blocked == '0' && steps.dispatchcheck.outputs.write_allowed == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release edit "$tag" --draft=false
+          fi
+          gh release view "$tag" --json isDraft,tagName,url
 
       - name: Dry-run / blocked conclusion
         if: steps.switch.outputs.blocked == '1' || steps.dispatchcheck.outputs.write_allowed != '1'
