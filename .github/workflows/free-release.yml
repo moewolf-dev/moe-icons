@@ -46,6 +46,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: free-release-${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
@@ -204,3 +205,20 @@ jobs:
         if: steps.switch.outputs.blocked == '1' || steps.dispatchcheck.outputs.write_allowed != '1'
         run: |
           echo "dry_run or switch disabled: validated payload but created/uploaded nothing"
+
+      - name: Notify unique auto-release failure (F6)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
+          CORRELATION_ID: ${{ github.event.client_payload.correlationId || inputs.correlationId }}
+        run: |
+          set -euo pipefail
+          node scripts/notify-release-failure.cjs --execute \
+            --repo "${GITHUB_REPOSITORY}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --stage "public-free-release" \
+            --resource-version "${VERSION:-n/a}" \
+            --correlation-id "${CORRELATION_ID:-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-free-release}" \
+            --attempt "${GITHUB_RUN_ATTEMPT}" \
+            --conclusion "failure"
