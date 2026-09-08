@@ -1,29 +1,48 @@
 name: Publish validated free artifact
 
+# E2E-F4A (ICON-E2E-0907): the public repo is not a build source. It consumes
+# the free-only candidate produced by moe-icons-code-library AFTER clitest/
+# webtest + resource acceptance, re-verifies every byte, and publishes the
+# immutable `v<resourceVersion>` Release. No human approval / required reviewer.
+# `workflow_dispatch` is retained only for `dry_run:true` (no writes).
+
 on:
+  repository_dispatch:
+    types: [moe-icons-free-release]
   workflow_dispatch:
     inputs:
-      fullVersion:
-        required: true
+      resourceVersion:
+        description: Immutable resource version
+        required: false
         type: string
       artifactId:
-        required: true
+        description: Code-library free-only Actions artifact id
+        required: false
         type: string
-      descriptorSha256:
-        required: true
+      publicDescriptorSha:
+        description: Public free descriptor SHA-256
+        required: false
         type: string
       sourceCommit:
-        required: true
+        required: false
         type: string
       generatorCommit:
-        required: true
+        required: false
+        type: string
+      upstreamRunId:
+        required: false
+        type: string
+      dry_run:
+        description: dry_run=true forces zero write operations
+        required: false
+        default: "true"
         type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: free-release-${{ inputs.fullVersion }}
+  group: free-release-${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
   cancel-in-progress: false
 
 jobs:
@@ -32,25 +51,67 @@ jobs:
     environment: free-release
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Validate immutable input
+      - uses: actions/checkout@v4
+
+      - name: Reject workflow_dispatch writes
+        id: dispatchcheck
         env:
-          VERSION: ${{ inputs.fullVersion }}
-          ARTIFACT_ID: ${{ inputs.artifactId }}
-          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
-          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
-          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-alpha|-beta)?$ ]]
-          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
-          [[ "$DESCRIPTOR_SHA" =~ ^[a-f0-9]{64}$ ]]
-          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$GENERATOR_COMMIT" =~ ^[a-f0-9]{40}$ ]]
-      - name: Download candidate with read-only source credential
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" != "true" ]; then
+            echo "workflow_dispatch is reserved for dry_run=true" >&2
+            exit 1
+          fi
+          echo "write_allowed=1" >> "$GITHUB_OUTPUT"
+
+      - name: Check auto-release switch (F6)
+        id: switch
+        env:
+          MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "blocked=0" >> "$GITHUB_OUTPUT"
+          elif [ "$MOEICONS_AUTO_RELEASE_ENABLED" != "true" ]; then
+            echo "blocked=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate dispatch payload
+        id: payload
+        if: steps.switch.outputs.blocked == '0'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          VERSION: ${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
+          ARTIFACT_ID: ${{ github.event.client_payload.artifactId || inputs.artifactId }}
+          DESCRIPTOR_SHA: ${{ github.event.client_payload.publicDescriptorSha || inputs.publicDescriptorSha }}
+          SOURCE_COMMIT: ${{ github.event.client_payload.sourceCommit || inputs.sourceCommit }}
+          GENERATOR_COMMIT: ${{ github.event.client_payload.generatorCommit || inputs.generatorCommit }}
+          UPSTREAM_RUN_ID: ${{ github.event.client_payload.upstreamRunId || inputs.upstreamRunId }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version" >&2; exit 1; }
+          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]] || { echo "Invalid artifactId" >&2; exit 1; }
+          [[ "$DESCRIPTOR_SHA" =~ ^[a-f0-9]{64}$ ]] || { echo "Invalid descriptor sha" >&2; exit 1; }
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid source commit" >&2; exit 1; }
+          [[ "$GENERATOR_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid generator commit" >&2; exit 1; }
+          [[ "$UPSTREAM_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid upstream run id" >&2; exit 1; }
+          {
+            echo "VERSION=$VERSION"
+            echo "ARTIFACT_ID=$ARTIFACT_ID"
+            echo "DESCRIPTOR_SHA=$DESCRIPTOR_SHA"
+            echo "SOURCE_COMMIT=$SOURCE_COMMIT"
+            echo "GENERATOR_COMMIT=$GENERATOR_COMMIT"
+            echo "UPSTREAM_RUN_ID=$UPSTREAM_RUN_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Download free-only candidate
+        if: steps.switch.outputs.blocked == '0'
         env:
           GH_TOKEN: ${{ secrets.CODE_LIBRARY_ARTIFACT_READ_TOKEN }}
-          ARTIFACT_ID: ${{ inputs.artifactId }}
         run: |
           set -euo pipefail
           test -n "$GH_TOKEN"
@@ -58,25 +119,22 @@ jobs:
           mkdir "$RUNNER_TEMP/candidate"
           gh api "repos/moewolf-dev/moe-icons-code-library/actions/artifacts/${ARTIFACT_ID}/zip" > "$RUNNER_TEMP/candidate.zip"
           unzip -q "$RUNNER_TEMP/candidate.zip" -d "$RUNNER_TEMP/candidate"
+
       - id: validate
-        name: Revalidate descriptor, catalog, archives and metadata
-        env:
-          VERSION: ${{ inputs.fullVersion }}
-          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
-          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
-          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
+        name: Revalidate public descriptor and all free archives
+        if: steps.switch.outputs.blocked == '0'
         run: |
           set -euo pipefail
           node scripts/validate-free-release.mjs "$RUNNER_TEMP/candidate" "$VERSION" "$DESCRIPTOR_SHA" "$SOURCE_COMMIT" "$GENERATOR_COMMIT" > "$RUNNER_TEMP/validated.json"
           echo "asset_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
           echo "metadata_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).metadata.sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
+          echo "assets_sha=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).assets.sha256)" "$RUNNER_TEMP/validated.json")" >> "$GITHUB_OUTPUT"
+
       - name: Enforce immutable idempotency
         id: existing
+        if: steps.switch.outputs.blocked == '0'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.fullVersion }}
-          EXPECTED_SHA: ${{ steps.validate.outputs.asset_sha }}
-          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
         run: |
           set -euo pipefail
           tag="v${VERSION}"
@@ -87,41 +145,48 @@ jobs:
           mkdir "$RUNNER_TEMP/existing"
           gh release download "$tag" \
             --pattern "moe-icons-free-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/existing"
           node scripts/compare-release.mjs "$RUNNER_TEMP/candidate" "$RUNNER_TEMP/existing" "$VERSION" "$DESCRIPTOR_SHA"
           echo "exists=true" >> "$GITHUB_OUTPUT"
+
       - name: Create immutable free release
-        if: steps.existing.outputs.exists != 'true'
+        if: steps.switch.outputs.blocked == '0' && steps.existing.outputs.exists != 'true' && steps.dispatchcheck.outputs.write_allowed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.fullVersion }}
-          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
-          GENERATOR_COMMIT: ${{ inputs.generatorCommit }}
         run: |
           set -euo pipefail
           gh release create "v${VERSION}" \
             "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz" \
             "$RUNNER_TEMP/candidate/moe-icons-free-${VERSION}.tgz.sha256" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-assets-${VERSION}.tgz" \
+            "$RUNNER_TEMP/candidate/moe-icons-free-assets-${VERSION}.tgz.sha256" \
             "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz" \
             "$RUNNER_TEMP/candidate/moe-icons-free-metadata-${VERSION}.tgz.sha256" \
             "$RUNNER_TEMP/candidate/release-descriptor.json" \
             --title "Moe Icons free ${VERSION}" \
-            --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}"
+            --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}\ncontentHash: see descriptor"
+
       - name: Re-read uploaded assets and publish latest descriptor
+        if: steps.switch.outputs.blocked == '0' && steps.dispatchcheck.outputs.write_allowed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.fullVersion }}
-          DESCRIPTOR_SHA: ${{ inputs.descriptorSha256 }}
         run: |
           set -euo pipefail
           tag="v${VERSION}"
           mkdir -p "$RUNNER_TEMP/uploaded"
           gh release download "$tag" \
             --pattern "moe-icons-free-${VERSION}.tgz" \
+            --pattern "moe-icons-free-assets-${VERSION}.tgz" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/uploaded"
           node scripts/write-latest-descriptor.mjs "$RUNNER_TEMP/uploaded" "$VERSION" "$DESCRIPTOR_SHA"
           gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json" --clobber
+
+      - name: Dry-run / blocked conclusion
+        if: steps.switch.outputs.blocked == '1' || steps.dispatchcheck.outputs.write_allowed != '1'
+        run: |
+          echo "dry_run or switch disabled: validated payload but created/uploaded nothing"

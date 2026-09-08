@@ -20,7 +20,8 @@ export function compareReleaseAssets(localDir, existingDir, version, descriptorS
 
   const code = `moe-icons-free-${version}.tgz`;
   const metadata = `moe-icons-free-metadata-${version}.tgz`;
-  const names = [code, `${code}.sha256`, metadata, `${metadata}.sha256`, "release-descriptor.json"];
+  const assets = `moe-icons-free-assets-${version}.tgz`;
+  const names = [code, `${code}.sha256`, assets, `${assets}.sha256`, metadata, `${metadata}.sha256`, "release-descriptor.json"];
 
   const drifted = [];
   for (const name of names) {

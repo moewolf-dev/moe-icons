@@ -45,9 +45,13 @@ const latest = {
   descriptorSha256: descriptorSha,
   assets: {
     code: asset(descriptor.free, "code"),
+    icons: descriptor.free.assets ? asset(descriptor.free.assets, "icons") : undefined,
     metadata: asset(descriptor.free.metadata, "metadata"),
   },
 };
+for (const [key, value] of Object.entries(latest.assets)) {
+  if (value === undefined) delete latest.assets[key];
+}
 
 writeFileSync(join(directory, "release-latest.json"), `${JSON.stringify(latest, null, 2)}\n`);
 process.stdout.write(`${JSON.stringify({ ok: true, version, sha256: sha256(JSON.stringify(latest, null, 2) + "\n") })}\n`);

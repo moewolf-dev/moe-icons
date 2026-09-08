@@ -75,6 +75,10 @@ function buildFixture(dir) {
     "metadata/catalog.json": catalogJson,
     "metadata/manifest.json": manifestJson,
   });
+  const assetsTgz = createTarGz({
+    "assets/moe-outline/ui-search.svg": '<svg viewBox="0 0 24 24"/>',
+    "assets/manifest.json": '{"schemaVersion":1,"assets":[]}\n',
+  });
   const descriptor = {
     fullVersion: VERSION,
     sourceCommit: "a".repeat(40),
@@ -92,6 +96,11 @@ function buildFixture(dir) {
           "manifest.json": { size: Buffer.byteLength(manifestJson), sha256: sha(Buffer.from(manifestJson)) },
         },
       },
+      assets: {
+        filename: `moe-icons-free-assets-${VERSION}.tgz`,
+        sha256: sha(assetsTgz),
+        size: assetsTgz.byteLength,
+      },
     },
     catalog: { filename: "catalog.json", sha256: sha(Buffer.from(catalogJson)), schemaVersion: 1 },
   };
@@ -99,12 +108,14 @@ function buildFixture(dir) {
   const files = {
     [`moe-icons-free-${VERSION}.tgz`]: code,
     [`moe-icons-free-${VERSION}.tgz.sha256`]: Buffer.from(`${sha(code)}  moe-icons-free-${VERSION}.tgz\n`),
+    [`moe-icons-free-assets-${VERSION}.tgz`]: assetsTgz,
+    [`moe-icons-free-assets-${VERSION}.tgz.sha256`]: Buffer.from(`${sha(assetsTgz)}  moe-icons-free-assets-${VERSION}.tgz\n`),
     [`moe-icons-free-metadata-${VERSION}.tgz`]: metadata,
     [`moe-icons-free-metadata-${VERSION}.tgz.sha256`]: Buffer.from(`${sha(metadata)}  moe-icons-free-metadata-${VERSION}.tgz\n`),
     "release-descriptor.json": Buffer.from(descriptorJson),
   };
   for (const [name, bytes] of Object.entries(files)) writeFileSync(join(dir, name), bytes);
-  return { descriptorSha: sha(Buffer.from(descriptorJson)), code, metadata };
+  return { descriptorSha: sha(Buffer.from(descriptorJson)), code, metadata, assets: assetsTgz };
 }
 
 async function compareReleaseAssets(localDir, existingDir) {
@@ -152,6 +163,7 @@ test("R8: validate-free-release accepts a valid candidate and rejects a tampered
     const { descriptorSha } = buildFixture(dir);
     const ok = execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" });
     assert.match(ok, /"metadata"/);
+    assert.match(ok, /"assets"/);
 
     buildFixture(valid);
     const metaPath = join(valid, `moe-icons-free-metadata-${VERSION}.tgz`);
@@ -163,5 +175,23 @@ test("R8: validate-free-release accepts a valid candidate and rejects a tampered
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(valid, { recursive: true, force: true });
+  }
+});
+
+test("R8: validate-free-release rejects a candidate with a pro node in the public descriptor", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rel-pro-"));
+  try {
+    const { descriptorSha } = buildFixture(dir);
+    const descriptorPath = join(dir, "release-descriptor.json");
+    const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8"));
+    descriptor.pro = { filename: `moe-icons-pro-${VERSION}.tgz`, sha256: "0".repeat(64) };
+    const dirtyJson = `${JSON.stringify(descriptor, null, 2)}\n`;
+    writeFileSync(descriptorPath, dirtyJson);
+    assert.throws(
+      () => execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, sha(Buffer.from(dirtyJson)), "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
+      /pro\/ent/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

@@ -20,6 +20,10 @@ const descriptorPath = join(directory, "release-descriptor.json");
 const descriptorBytes = readFileSync(descriptorPath);
 if (sha256(descriptorBytes) !== descriptorSha) throw new Error("release descriptor checksum mismatch");
 const descriptor = JSON.parse(descriptorBytes.toString("utf8"));
+// Public descriptor is the free-only cropped descriptor; pro/ent nodes or any
+// pro style-group must never appear in it.
+const descriptorJson = descriptorBytes.toString("utf8");
+if (/"pro"|"ent"/.test(descriptorJson)) throw new Error("public descriptor must not contain pro/ent nodes");
 if (
   descriptor.fullVersion !== version ||
   descriptor.sourceCommit !== sourceCommit ||
@@ -84,10 +88,29 @@ for (const file of expectedMetadataEntries) {
   if (bytes.length !== metadata.files[name].size) throw new Error(`metadata ${name} size mismatch`);
 }
 
+// Validate the assets-only archive (free icons raw bytes; distinct content from
+// the combined code archive). F4A: it must exist, verify checksum/size, and
+// contain only assets/** paths.
+const assetsRef = descriptor.free?.assets;
+const assetsName = `moe-icons-free-assets-${version}.tgz`;
+if (!assetsRef || assetsRef.filename !== assetsName) throw new Error("invalid free assets descriptor");
+if (!/^[a-f0-9]{64}$/.test(assetsRef.sha256 ?? "")) throw new Error("invalid free assets sha256");
+const assetsPath = join(directory, assetsName);
+const assetsBytes = readFileSync(assetsPath);
+if (sha256(assetsBytes) !== assetsRef.sha256) throw new Error("free assets archive checksum mismatch");
+if (assetsBytes.length !== assetsRef.size) throw new Error("free assets archive size mismatch");
+const assetsEntries = execFileSync("tar", ["-tzf", assetsPath], { encoding: "utf8" })
+  .split("\n")
+  .filter(Boolean)
+  .sort();
+if (assetsEntries.length === 0 || assetsEntries.some((line) => !line.startsWith("assets/"))) {
+  throw new Error("free assets archive must contain only assets/** paths");
+}
+
 const unexpected = readdirSync(directory).filter(
-  (name) => ![expectedName, `${expectedName}.sha256`, metadataName, `${metadataName}.sha256`, "release-descriptor.json"].includes(name),
+  (name) => ![expectedName, `${expectedName}.sha256`, metadataName, `${metadataName}.sha256`, assetsName, `${assetsName}.sha256`, "release-descriptor.json"].includes(name),
 );
 if (unexpected.some((name) => name.includes("pro"))) throw new Error("candidate artifact contains a pro asset");
 process.stdout.write(
-  `${JSON.stringify({ version, filename: expectedName, sha256: descriptor.free.sha256, metadata: { filename: metadataName, sha256: metadata.sha256 } })}\n`,
+  `${JSON.stringify({ version, filename: expectedName, sha256: descriptor.free.sha256, metadata: { filename: metadataName, sha256: metadata.sha256 }, assets: { filename: assetsName, sha256: assetsRef.sha256 } })}\n`,
 );
