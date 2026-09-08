@@ -204,6 +204,9 @@ jobs:
               --title "Moe Icons free ${VERSION}" \
               --notes "Source: ${SOURCE_COMMIT}\nGenerator: ${GENERATOR_COMMIT}\ncontentHash: see descriptor"
           fi
+          # R-P0-10: a wrong same-name asset in a draft is deleted and re-uploaded;
+          # a published Release is never modified.
+          mkdir -p "$RUNNER_TEMP/draft"
           for asset in \
             "moe-icons-free-${VERSION}.tgz" \
             "moe-icons-free-${VERSION}.tgz.sha256" \
@@ -212,7 +215,16 @@ jobs:
             "moe-icons-free-metadata-${VERSION}.tgz" \
             "moe-icons-free-metadata-${VERSION}.tgz.sha256" \
             "release-descriptor.json"; do
-            if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx "$asset"; then
+            candidate_sha="$(shasum -a 256 "$RUNNER_TEMP/candidate/$asset" | awk '{print $1}')"
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx "$asset"; then
+              gh release download "$tag" --pattern "$asset" --dir "$RUNNER_TEMP/draft" --clobber
+              existing_sha="$(shasum -a 256 "$RUNNER_TEMP/draft/$asset" | awk '{print $1}')"
+              if [ "$existing_sha" != "$candidate_sha" ]; then
+                echo "repairing wrong draft asset $asset"
+                gh release delete-asset "$tag" "$asset" --yes
+                gh release upload "$tag" "$RUNNER_TEMP/candidate/$asset"
+              fi
+            else
               gh release upload "$tag" "$RUNNER_TEMP/candidate/$asset"
             fi
           done

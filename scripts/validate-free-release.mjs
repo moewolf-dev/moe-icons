@@ -16,6 +16,15 @@ for (const [name, value, pattern] of [
 }
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+/** R-P0-10: every archive must ship a matching .sha256 sidecar. */
+const assertSidecar = (filename, expectedSha) => {
+  const sidecar = readFileSync(join(directory, `${filename}.sha256`), "utf8").trim();
+  const [digest, name] = sidecar.split(/\s+/);
+  if (digest !== expectedSha) throw new Error(`${filename} sidecar digest mismatch`);
+  if (name && name !== filename && name !== `./${filename}`) {
+    throw new Error(`${filename} sidecar filename mismatch: ${name}`);
+  }
+};
 const descriptorPath = join(directory, "release-descriptor.json");
 const descriptorBytes = readFileSync(descriptorPath);
 if (sha256(descriptorBytes) !== descriptorSha) throw new Error("release descriptor checksum mismatch");
@@ -42,6 +51,7 @@ if (!descriptor.catalog || descriptor.catalog.filename !== "catalog.json" || !/^
 const archivePath = join(directory, expectedName);
 const archiveBytes = readFileSync(archivePath);
 if (sha256(archiveBytes) !== descriptor.free.sha256) throw new Error("free archive checksum mismatch");
+assertSidecar(expectedName, descriptor.free.sha256);
 
 const entries = execFileSync("tar", ["-tzf", archivePath], { encoding: "utf8" })
   .split("\n")
@@ -68,6 +78,7 @@ if (metadata.files["catalog.json"].sha256 !== descriptor.catalog.sha256) {
 const metadataPath = join(directory, metadataName);
 const metadataBytes = readFileSync(metadataPath);
 if (sha256(metadataBytes) !== metadata.sha256) throw new Error("free metadata archive checksum mismatch");
+assertSidecar(metadataName, metadata.sha256);
 if (metadataBytes.length !== metadata.size) throw new Error("free metadata archive size mismatch");
 const metadataEntries = execFileSync("tar", ["-tzf", metadataPath], { encoding: "utf8" })
   .split("\n")
@@ -98,6 +109,7 @@ if (!/^[a-f0-9]{64}$/.test(assetsRef.sha256 ?? "")) throw new Error("invalid fre
 const assetsPath = join(directory, assetsName);
 const assetsBytes = readFileSync(assetsPath);
 if (sha256(assetsBytes) !== assetsRef.sha256) throw new Error("free assets archive checksum mismatch");
+assertSidecar(assetsName, assetsRef.sha256);
 if (assetsBytes.length !== assetsRef.size) throw new Error("free assets archive size mismatch");
 const assetsEntries = execFileSync("tar", ["-tzf", assetsPath], { encoding: "utf8" })
   .split("\n")

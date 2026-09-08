@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const SHA = /^[a-f0-9]{64}$/;
@@ -23,6 +23,13 @@ export function compareReleaseAssets(localDir, existingDir, version, descriptorS
   const assets = `moe-icons-free-assets-${version}.tgz`;
   const names = [code, `${code}.sha256`, assets, `${assets}.sha256`, metadata, `${metadata}.sha256`, "release-descriptor.json"];
 
+  // R-P0-10: a published Release must contain exactly the eight assets.
+  const required = [...names, "release-latest.json"].sort();
+  const existingNames = readdirSync(existingDir).sort();
+  if (JSON.stringify(existingNames) !== JSON.stringify(required)) {
+    throw new Error(`existing release asset set is not exactly eight files: ${existingNames.join(", ")}`);
+  }
+
   const drifted = [];
   for (const name of names) {
     const local = readFileSync(join(localDir, name));
@@ -31,6 +38,11 @@ export function compareReleaseAssets(localDir, existingDir, version, descriptorS
   }
   const localDescriptorSha = sha256(readFileSync(join(localDir, "release-descriptor.json")));
   if (localDescriptorSha !== descriptorSha256) drifted.push("release-descriptor.json (against sidecar)");
+
+  const latest = JSON.parse(readFileSync(join(existingDir, "release-latest.json"), "utf8"));
+  if (latest.fullVersion !== version || latest.descriptorSha256 !== descriptorSha256 || latest.tier !== "free") {
+    drifted.push("release-latest.json");
+  }
   return drifted;
 }
 

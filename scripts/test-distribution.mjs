@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -120,6 +120,25 @@ function buildFixture(dir) {
 
 async function compareReleaseAssets(localDir, existingDir) {
   const { compareReleaseAssets } = await import(pathToFileURL(join(ROOT, "scripts", "compare-release.mjs")).href);
+  // A published Release has eight assets; the fixture "existing" dir needs the
+  // latest descriptor that the draft step attaches after upload.
+  const latestPath = join(existingDir, "release-latest.json");
+  if (!existsSync(latestPath)) {
+    writeFileSync(
+      latestPath,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          tier: "free",
+          fullVersion: VERSION,
+          descriptorSha256: sha(readFileSync(join(existingDir, "release-descriptor.json"))),
+          assets: {},
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  }
   return compareReleaseAssets(localDir, existingDir, VERSION, sha(readFileSync(join(localDir, "release-descriptor.json"))));
 }
 
@@ -215,4 +234,34 @@ test("R-P0-2: free-release manual runs cannot bypass the kill switch", () => {
   assert.match(workflow, /MOEICONS_AUTO_RELEASE_ENABLED/, "write permission must check the kill switch");
   // write_allowed must be produced inside a conditional, never unconditionally.
   assert.doesNotMatch(workflow, /\n\s*echo "write_allowed=1" >> "\$GITHUB_OUTPUT"\n\s*$/);
+});
+
+test("R-P0-10: wrong sidecar and extra asset are rejected", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "rel-sidecar-"));
+  try {
+    const { descriptorSha } = buildFixture(dir);
+    writeFileSync(join(dir, `moe-icons-free-${VERSION}.tgz.sha256`), `${"0".repeat(64)}  moe-icons-free-${VERSION}.tgz\n`);
+    assert.throws(
+      () => execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
+      /sidecar digest mismatch/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+
+  const local = mkdtempSync(join(tmpdir(), "rel-extra-local-"));
+  const existing = mkdtempSync(join(tmpdir(), "rel-extra-existing-"));
+  try {
+    buildFixture(local);
+    buildFixture(existing);
+    writeFileSync(
+      join(existing, "release-latest.json"),
+      JSON.stringify({ schemaVersion: 1, tier: "free", fullVersion: VERSION, descriptorSha256: sha(readFileSync(join(existing, "release-descriptor.json"))), assets: {} }),
+    );
+    writeFileSync(join(existing, "extra.tgz"), "extra");
+    await assert.rejects(compareReleaseAssets(local, existing), /exactly eight files/);
+  } finally {
+    rmSync(local, { recursive: true, force: true });
+    rmSync(existing, { recursive: true, force: true });
+  }
 });
