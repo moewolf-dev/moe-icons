@@ -208,3 +208,11 @@ test("P0-8: free-release.yml is draft-first and publishes only after eight asset
   assert.ok(publishAt > countAt, "must publish only after the full readback");
   assert.ok(!/gh release create "v\$\{VERSION\}"/.test(workflow), "must not create a published release directly");
 });
+
+test("R-P0-2: free-release manual runs cannot bypass the kill switch", () => {
+  const workflow = readFileSync(join(ROOT, ".github", "workflows", "free-release.yml"), "utf8");
+  assert.match(workflow, /break_glass/, "manual write needs an explicit break-glass input");
+  assert.match(workflow, /MOEICONS_AUTO_RELEASE_ENABLED/, "write permission must check the kill switch");
+  // write_allowed must be produced inside a conditional, never unconditionally.
+  assert.doesNotMatch(workflow, /\n\s*echo "write_allowed=1" >> "\$GITHUB_OUTPUT"\n\s*$/);
+});

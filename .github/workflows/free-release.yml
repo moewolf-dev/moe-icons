@@ -43,6 +43,10 @@ on:
         required: false
         default: "true"
         type: string
+      break_glass:
+        description: Type PUBLISH to allow a manual write (requires kill switch true)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -60,18 +64,29 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Reject workflow_dispatch writes
+      # R-P0-2: a manual run may validate but can never write unless the global
+      # kill switch is true AND break_glass=PUBLISH is supplied.
+      - name: Resolve write permission
         id: dispatchcheck
         env:
           EVENT_NAME: ${{ github.event_name }}
           DRY_RUN: ${{ inputs.dry_run }}
+          BREAK_GLASS: ${{ inputs.break_glass }}
+          MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" != "true" ]; then
-            echo "workflow_dispatch is reserved for dry_run=true" >&2
+          if [ "$MOEICONS_AUTO_RELEASE_ENABLED" = "true" ] && {
+            [ "$EVENT_NAME" = "repository_dispatch" ] ||
+            { [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" = "false" ] && [ "$BREAK_GLASS" = "PUBLISH" ]; };
+          }; then
+            echo "write_allowed=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "write_allowed=0" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" != "true" ] && [ "$BREAK_GLASS" != "PUBLISH" ]; then
+            echo "manual run requires dry_run=true or break_glass=PUBLISH" >&2
             exit 1
           fi
-          echo "write_allowed=1" >> "$GITHUB_OUTPUT"
 
       - name: Check auto-release switch (F6)
         id: switch
@@ -79,12 +94,10 @@ jobs:
           MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$MOEICONS_AUTO_RELEASE_ENABLED" = "true" ]; then
             echo "blocked=0" >> "$GITHUB_OUTPUT"
-          elif [ "$MOEICONS_AUTO_RELEASE_ENABLED" != "true" ]; then
-            echo "blocked=1" >> "$GITHUB_OUTPUT"
           else
-            echo "blocked=0" >> "$GITHUB_OUTPUT"
+            echo "blocked=1" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Validate dispatch payload
