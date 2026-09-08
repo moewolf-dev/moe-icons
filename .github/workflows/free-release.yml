@@ -6,6 +6,8 @@ name: Publish validated free artifact
 # immutable `v<resourceVersion>` Release. No human approval / required reviewer.
 # `workflow_dispatch` is retained only for `dry_run:true` (no writes).
 
+run-name: acceptance ${{ github.event.client_payload.correlationId || inputs.correlationId || github.sha }}
+
 on:
   repository_dispatch:
     types: [moe-icons-free-release]
@@ -30,6 +32,10 @@ on:
         required: false
         type: string
       upstreamRunId:
+        required: false
+        type: string
+      correlationId:
+        description: F4 correlation id (<upstreamRunId>-<attempt>-free-release)
         required: false
         type: string
       dry_run:
@@ -91,6 +97,7 @@ jobs:
           SOURCE_COMMIT: ${{ github.event.client_payload.sourceCommit || inputs.sourceCommit }}
           GENERATOR_COMMIT: ${{ github.event.client_payload.generatorCommit || inputs.generatorCommit }}
           UPSTREAM_RUN_ID: ${{ github.event.client_payload.upstreamRunId || inputs.upstreamRunId }}
+          CORRELATION_ID: ${{ github.event.client_payload.correlationId || inputs.correlationId }}
         run: |
           set -euo pipefail
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version" >&2; exit 1; }
@@ -99,6 +106,12 @@ jobs:
           [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid source commit" >&2; exit 1; }
           [[ "$GENERATOR_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid generator commit" >&2; exit 1; }
           [[ "$UPSTREAM_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid upstream run id" >&2; exit 1; }
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            [[ "$CORRELATION_ID" =~ ^[0-9]+-[0-9]+-free-release$ ]] || {
+              echo "Invalid correlationId for repository_dispatch" >&2
+              exit 1
+            }
+          fi
           {
             echo "VERSION=$VERSION"
             echo "ARTIFACT_ID=$ARTIFACT_ID"
@@ -106,6 +119,7 @@ jobs:
             echo "SOURCE_COMMIT=$SOURCE_COMMIT"
             echo "GENERATOR_COMMIT=$GENERATOR_COMMIT"
             echo "UPSTREAM_RUN_ID=$UPSTREAM_RUN_ID"
+            echo "CORRELATION_ID=${CORRELATION_ID:-}"
           } >> "$GITHUB_ENV"
 
       - name: Download free-only candidate
