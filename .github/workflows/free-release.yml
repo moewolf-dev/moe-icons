@@ -59,6 +59,10 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # CODE_LIBRARY_ARTIFACT_READ_TOKEN is owned by this environment. Do not add
+    # a repository secret with the same name: environment secrets take
+    # precedence, and probes must also declare `environment: free-release` so
+    # they validate the exact credential used by this production download.
     environment: free-release
     timeout-minutes: 15
     steps:
@@ -139,6 +143,9 @@ jobs:
       - name: Download free-only candidate
         if: steps.switch.outputs.blocked == '0'
         env:
+          # This resolves to the free-release environment secret, not a
+          # repository secret. It needs Actions:read on only the private
+          # moewolf-dev/moe-icons-code-library repository.
           GH_TOKEN: ${{ secrets.CODE_LIBRARY_ARTIFACT_READ_TOKEN }}
         run: |
           set -euo pipefail
