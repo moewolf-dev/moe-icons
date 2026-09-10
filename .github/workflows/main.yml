@@ -11,6 +11,12 @@ on:
 
 jobs:
   deploy:
+    # SEC-A0-03 (RELEASE-BITMAP-0909): permanently retired. This legacy workflow
+    # synced ./icons/MoeLite/svgs to the old R2 path with a separate
+    # CLOUDFLARE_R2_* credential set. The job-level hard guard prevents any
+    # parallel write with the new Free Release / R2 chain. Do not remove; delete
+    # the whole workflow only after the new chain is production-verified.
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:

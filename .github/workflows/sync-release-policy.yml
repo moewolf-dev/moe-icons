@@ -1,0 +1,102 @@
+name: Sync release policy to consumers
+
+# RELEASE-BITMAP-0909 D-10: the Free style-group contract is the single source
+# of truth here. On change, this workflow distributes a read-only vendored copy
+# plus PIN to each consumer repository and opens a PR. It never auto-merges and
+# never uses git submodules or an npm contract package.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/release-policy/**'
+      - 'scripts/sync-release-policy.mjs'
+      - '.github/workflows/sync-release-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-policy-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - moe-icons-library
+          - moe-icons-code-library
+          - moe-icons-cli
+          - moe-icons-web-worker
+    steps:
+      - name: Checkout public contract repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Compute contract digest
+        id: contract
+        run: |
+          set -euo pipefail
+          sha="$(shasum -a 256 contracts/release-policy/free-style-groups.v1.json | awk '{print $1}')"
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Clone consumer repository
+        env:
+          SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 \
+            "https://x-access-token:${SYNC_TOKEN}@github.com/moewolf-dev/${{ matrix.repo }}.git" \
+            "$RUNNER_TEMP/consumer"
+
+      - name: Apply vendored contract and PIN
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/sync-release-policy.mjs \
+            --commit "$SOURCE_COMMIT" \
+            --repo "$RUNNER_TEMP/consumer"
+
+      - name: Open or update sync PR
+        env:
+          SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/consumer"
+          if [ -z "$(git status --porcelain -- vendor/moe-icons-release-policy)" ]; then
+            echo "no drift for ${{ matrix.repo }}"
+            exit 0
+          fi
+          git config user.name "moe-icons release-policy sync"
+          git config user.email "moe-icons-release-policy-sync[bot]@users.noreply.github.com"
+          BRANCH="release-policy/sync-${GITHUB_SHA::7}"
+          git checkout -B "$BRANCH"
+          git add vendor/moe-icons-release-policy
+          git commit -m "chore(release-policy): sync free-style-groups from moe-icons@${GITHUB_SHA::7}"
+          git push --force "https://x-access-token:${SYNC_TOKEN}@github.com/moewolf-dev/${{ matrix.repo }}.git" "HEAD:$BRANCH"
+          if gh pr view "$BRANCH" --repo "moewolf-dev/${{ matrix.repo }}" >/dev/null 2>&1; then
+            echo "PR already open for $BRANCH"
+          else
+            gh pr create \
+              --repo "moewolf-dev/${{ matrix.repo }}" \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(release-policy): sync Free set from moe-icons@${GITHUB_SHA::7}" \
+              --body "Automated vendored copy of contracts/release-policy/free-style-groups.v1.json (sha256: ${{ steps.contract.outputs.sha256 }}). Review required; never auto-merged."
+          fi
+
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout public contract repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify contract source only
+        run: node scripts/test-release-policy.mjs
