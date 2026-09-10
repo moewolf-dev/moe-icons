@@ -4,7 +4,9 @@ Single source of truth for cross-repo release entitlements (`RELEASE-BITMAP-0909
 
 - `free-style-groups.v1.json` — the exact Free style-group set. This file is the
   only authoritative definition. Changes require CODEOWNERS/required review.
-- `source-manifest-v2.schema.json` — JSON Schema for source manifest schema v2.
+
+The source-manifest v2 JSON Schema is a separate media-format contract; it is
+not vendored or versioned as part of this release-policy directory.
 
 Every consumer repository vendors a read-only copy under
 `vendor/moe-icons-release-policy/`:
