@@ -45,7 +45,23 @@ jobs:
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
           echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
+      # The cross-repo token is configured by the repository owner. Until it
+      # exists the sync must not fail the run: it degrades to a no-op with a
+      # notice, and the contract source commit is still valid.
+      - name: Check sync token
+        id: token
+        env:
+          SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
+        run: |
+          if [ -n "$SYNC_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::RELEASE_POLICY_SYNC_TOKEN is not configured; skipping vendored sync for ${{ matrix.repo }}"
+          fi
+
       - name: Clone consumer repository
+        if: steps.token.outputs.available == 'true'
         env:
           SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
         run: |
@@ -55,6 +71,7 @@ jobs:
             "$RUNNER_TEMP/consumer"
 
       - name: Apply vendored contract and PIN
+        if: steps.token.outputs.available == 'true'
         env:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
@@ -64,6 +81,7 @@ jobs:
             --repo "$RUNNER_TEMP/consumer"
 
       - name: Open or update sync PR
+        if: steps.token.outputs.available == 'true'
         env:
           SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
           GH_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}

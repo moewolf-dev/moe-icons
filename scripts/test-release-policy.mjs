@@ -70,6 +70,9 @@ test('release-policy sync uses the cross-repo token for gh PR operations', () =>
   assert.match(prStep, /git status --porcelain -- vendor\/moe-icons-release-policy/);
   assert.doesNotMatch(prStep, /git diff --quiet/);
   assert.match(prStep, /gh pr create/);
+  // Missing token must degrade to a no-op, not fail the contract push.
+  assert.match(workflow, /RELEASE_POLICY_SYNC_TOKEN is not configured/);
+  assert.match(workflow, /steps\.token\.outputs\.available == 'true'/);
 });
 
 test('release-policy contract has an explicit code owner', () => {
