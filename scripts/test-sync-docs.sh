@@ -84,6 +84,32 @@ case "$OUT" in
   *) bad "no-op: unexpected output: $OUT" ;;
 esac
 
+echo "== third language add/update/delete + registry sync =="
+mkdir -p "$PUBLIC/docs/fr"
+cat > "$PUBLIC/docs/fr/index.md" <<'EOF'
+# Accueil
+EOF
+cat > "$PUBLIC/docs/locales.json" <<'EOF'
+{"schemaVersion":1,"locales":[{"slug":"root","label":"English","lang":"en","link":"/"},{"slug":"cn","label":"简体中文","lang":"zh-CN","link":"/cn/"},{"slug":"fr","label":"Français","lang":"fr","link":"/fr/"}]}
+EOF
+"$SYNC" "$SRC" "$PRIVATE" >/dev/null
+assert_exists "locale-add: fr/index.md synced" "$DEST/fr/index.md"
+assert_exists "locale-add: registry synced" "$DEST/locales.json"
+printf '# Accueil v2\n' > "$PUBLIC/docs/fr/index.md"
+"$SYNC" "$SRC" "$PRIVATE" >/dev/null
+assert_eq "locale-update: fr/index.md updated" "# Accueil v2" "$(cat "$DEST/fr/index.md")"
+rm -rf "$PUBLIC/docs/fr"
+cat > "$PUBLIC/docs/locales.json" <<'EOF'
+{"schemaVersion":1,"locales":[{"slug":"root","label":"English","lang":"en","link":"/"},{"slug":"cn","label":"简体中文","lang":"zh-CN","link":"/cn/"}]}
+EOF
+"$SYNC" "$SRC" "$PRIVATE" >/dev/null
+assert_absent "locale-delete: fr directory removed" "$DEST/fr"
+if grep -q '"fr"' "$DEST/locales.json"; then
+  bad "locale-delete: registry still lists fr"
+else
+  ok "locale-delete: registry no longer lists fr"
+fi
+
 echo "== safe failures (target must not be deleted) =="
 # Empty source directory (no index.md).
 EMPTY="$TMP/empty"

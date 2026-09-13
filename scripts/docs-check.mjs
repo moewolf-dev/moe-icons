@@ -93,6 +93,44 @@ for (const f of mdFiles) {
   }
 }
 
+// 4. Locale registry (DEV-E02/DEC-46): declarative, canonical and bidirectional.
+const LOCALES = join(DOCS, 'locales.json')
+if (!existsSync(LOCALES)) {
+  errors.push('docs/locales.json is required')
+} else {
+  try {
+    const registry = JSON.parse(readFileSync(LOCALES, 'utf8'))
+    if (registry.schemaVersion !== 1) errors.push('docs/locales.json schemaVersion must be 1')
+    if (!Array.isArray(registry.locales) || registry.locales.length === 0) {
+      errors.push('docs/locales.json must declare a non-empty locales array')
+    }
+    const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+    const langRe = /^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-[A-Z]{2}|-[0-9]{3})?$/
+    const seen = new Set()
+    let hasCn = false
+    for (const locale of registry.locales ?? []) {
+      const slug = String(locale.slug ?? '')
+      if (!slugRe.test(slug) && slug !== 'root') errors.push(`docs/locales.json invalid slug: ${slug}`)
+      if (seen.has(slug)) errors.push(`docs/locales.json duplicate slug: ${slug}`)
+      seen.add(slug)
+      if (!langRe.test(String(locale.lang ?? ''))) errors.push(`docs/locales.json invalid lang: ${locale.lang}`)
+      if (typeof locale.link !== 'string' || !locale.link.startsWith('/')) errors.push(`docs/locales.json invalid link: ${locale.link}`)
+      if (slug === 'cn') {
+        hasCn = true
+        if (locale.lang !== 'zh-CN') errors.push('docs/locales.json cn must map to lang zh-CN')
+      }
+      if (slug !== 'root') {
+        const indexPath = join(DOCS, slug, 'index.md')
+        if (!existsSync(indexPath)) errors.push(`docs/locales.json locale "${slug}" has no docs/${slug}/index.md`)
+      }
+    }
+    if (!registry.locales.some((locale) => locale.slug === 'root')) errors.push('docs/locales.json must include the root en locale')
+    if (hasCn && existsSync(join(DOCS, 'zh-cn'))) errors.push('docs/zh-cn must not exist; cn is the single zh-CN tree')
+  } catch (e) {
+    errors.push(`docs/locales.json parse error: ${e.message}`)
+  }
+}
+
 if (errors.length > 0) {
   console.error('docs:check failed:')
   for (const e of errors) console.error(`  - ${e}`)

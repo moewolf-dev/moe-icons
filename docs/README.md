@@ -11,8 +11,14 @@ to the private website repository and published to
 ## Directory layout
 
 - `docs/` (this directory) — English documentation, the default language.
-- `docs/cn/` — Chinese documentation.
-- Other language directories may be added later and follow the same convention.
+- `docs/cn/` — Chinese documentation (`lang: zh-CN` compatibility alias; do
+  not create a second `docs/zh-cn/` tree).
+- `docs/locales.json` — the declarative locale registry (DEV-E02). Add a new
+  language by adding its directory **and** one registry entry; the private
+  website VitePress config reads and validates this file, so no second manual
+  registration is required.
+- Other language directories follow the same convention (lowercase,
+  hyphenated slugs; canonical BCP-47 `lang`).
 
 ## Rules for contributors
 
@@ -39,8 +45,11 @@ npm run docs:build
 
 Both commands must exit with status `0`.
 
-## Navigation
+## Navigation and locales
 
-New pages do not appear in the website navigation automatically. Submit the
-content change here, then update the sidebar/navigation separately in the
-private website repository.
+Language content and the `docs/locales.json` registry are synchronized to the
+private website repository together and surface as a pull request. The private
+VitePress config only reads, schema-validates and renders the registry — it
+never executes sync code and does not maintain a second locale list. A new
+language becomes available once the sync PR is reviewed, merged, and the docs
+build passes.

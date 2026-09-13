@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "locales": [
+    {
+      "slug": "root",
+      "label": "English",
+      "lang": "en",
+      "link": "/",
+      "nav": [{ "text": "Home", "link": "/" }],
+      "sidebar": []
+    },
+    {
+      "slug": "cn",
+      "label": "简体中文",
+      "lang": "zh-CN",
+      "link": "/cn/",
+      "nav": [{ "text": "首页", "link": "/cn/" }],
+      "sidebar": []
+    }
+  ]
+}

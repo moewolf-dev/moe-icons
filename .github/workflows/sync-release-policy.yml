@@ -57,7 +57,7 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::RELEASE_POLICY_SYNC_TOKEN is not configured; skipping vendored sync for ${{ matrix.repo }}"
+            echo "::warning::NOT_READY: RELEASE_POLICY_SYNC_TOKEN is not configured; skipping vendored sync for ${{ matrix.repo }} (continuous distribution inactive)"
           fi
 
       - name: Clone consumer repository
@@ -109,6 +109,30 @@ jobs:
               --title "chore(release-policy): sync Free set from moe-icons@${GITHUB_SHA::7}" \
               --body "Automated vendored copy of contracts/release-policy/free-style-groups.v1.json (sha256: ${{ steps.contract.outputs.sha256 }}). Review required; never auto-merged."
           fi
+
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout public contract repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Report continuous distribution readiness (AUD-BLOCK-08)
+        env:
+          SYNC_TOKEN: ${{ secrets.RELEASE_POLICY_SYNC_TOKEN }}
+          MOEICONS_POLICY_SYNC_REQUIRED: ${{ vars.MOEICONS_POLICY_SYNC_REQUIRED || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SYNC_TOKEN" ]; then present=true; else present=false; fi
+          {
+            echo "## Release policy sync readiness"
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          node scripts/sync-release-policy-readiness.mjs \
+            --token-present "$present" \
+            --require "$MOEICONS_POLICY_SYNC_REQUIRED" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   drift:
     runs-on: ubuntu-latest

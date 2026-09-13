@@ -16,9 +16,15 @@ It includes several features:
 
 Official source icons are stored under `icons/<style>/`, one directory per style group:
 
-- `icons/MoeLite/svgs/` — the standard icon set (SVG sources).
-- `icons/Moe/` — the standard style group (populated as sources are added).
-- `icons/MoeAnimate/` — the animated style group (populated as sources are added).
+- `icons/moe-outline/` — the standard outline Free style group.
+- `icons/moe-lite-outline/` — the lite outline Free style group.
+- `icons/moe-solid/` — the solid Free style group.
+- `icons/moe-colored/` — the colored Free style group.
+
+The Free set is fixed by `contracts/release-policy/free-style-groups.v1.json`
+(RELEASE-BITMAP-0909 D-01). The legacy `Moe`, `MoeAnimate` and `MoeLite`
+directories were removed; see `scripts/migrate-public-icons.mjs` for the exact
+mapping.
 
 Public documentation lives in [`docs/`](./docs/README.md).
 

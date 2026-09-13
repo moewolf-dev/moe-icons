@@ -47,6 +47,10 @@ on:
         description: Type PUBLISH to allow a manual write (requires kill switch true)
         required: false
         type: string
+      binding:
+        description: Nested Free-scoped binding JSON from the validated candidate receipt (required for manual runs)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -110,12 +114,14 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           VERSION: ${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
-          ARTIFACT_ID: ${{ github.event.client_payload.artifactId || inputs.artifactId }}
-          DESCRIPTOR_SHA: ${{ github.event.client_payload.publicDescriptorSha || inputs.publicDescriptorSha }}
+          ARTIFACT_ID: ${{ github.event.client_payload.artifact.id || github.event.client_payload.artifactId || inputs.artifactId }}
+          DESCRIPTOR_SHA: ${{ github.event.client_payload.artifact.descriptorSha || github.event.client_payload.publicDescriptorSha || inputs.publicDescriptorSha }}
           SOURCE_COMMIT: ${{ github.event.client_payload.sourceCommit || inputs.sourceCommit }}
           GENERATOR_COMMIT: ${{ github.event.client_payload.generatorCommit || inputs.generatorCommit }}
           UPSTREAM_RUN_ID: ${{ github.event.client_payload.upstreamRunId || inputs.upstreamRunId }}
           CORRELATION_ID: ${{ github.event.client_payload.correlationId || inputs.correlationId }}
+          PAYLOAD_BINDING: ${{ toJson(github.event.client_payload.binding) }}
+          INPUT_BINDING: ${{ inputs.binding }}
         run: |
           set -euo pipefail
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version" >&2; exit 1; }
@@ -124,12 +130,23 @@ jobs:
           [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid source commit" >&2; exit 1; }
           [[ "$GENERATOR_COMMIT" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid generator commit" >&2; exit 1; }
           [[ "$UPSTREAM_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid upstream run id" >&2; exit 1; }
+          # PATCH-24-B: every write path (dispatch AND manual break-glass) must
+          # present the same Free-scoped binding from the frozen candidate receipt.
+          BINDING_JSON="$PAYLOAD_BINDING"
+          if [ -z "${BINDING_JSON:-}" ] || [ "$BINDING_JSON" = "null" ]; then
+            BINDING_JSON="$INPUT_BINDING"
+          fi
+          [[ -n "${BINDING_JSON:-}" && "$BINDING_JSON" != "null" ]] || {
+            echo "free release is missing the receipt binding (manual runs must supply binding)" >&2
+            exit 1
+          }
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             [[ "$CORRELATION_ID" =~ ^[0-9]+-[0-9]+-free-release$ ]] || {
               echo "Invalid correlationId for repository_dispatch" >&2
               exit 1
             }
           fi
+          node scripts/validate-release-event-binding.mjs --binding "$BINDING_JSON"
           {
             echo "VERSION=$VERSION"
             echo "ARTIFACT_ID=$ARTIFACT_ID"

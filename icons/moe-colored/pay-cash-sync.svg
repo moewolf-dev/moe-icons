@@ -1,0 +1,11 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="24" height="24" fill="#1E1E1E"/>
+<rect width="1440" height="164" transform="translate(-718 -70)" fill="white"/>
+<path d="M3 6V9.5V14.5V18H6.5H17.5H21V14.5V9.5V6H17.5H6.5H3Z" fill="#CBD5E1"/>
+<path d="M3 6V9.5H3.5C5.15685 9.5 6.5 8.15685 6.5 6.5V6H3Z" fill="white"/>
+<path d="M3 14.5V18H6.5V17.5C6.5 15.8431 5.15685 14.5 3.5 14.5H3Z" fill="white"/>
+<path d="M21 6H17.5V6.5C17.5 8.15685 18.8431 9.5 20.5 9.5H21V6Z" fill="white"/>
+<path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" fill="white"/>
+<path d="M22.7098 14.3966L22.0027 15.6213C21.5738 14.0209 19.9288 13.0712 18.3284 13.5C17.6352 13.6857 17.0641 14.0997 16.6742 14.6393M15.5 18.399L16.2071 17.1742C16.6359 18.7746 18.2809 19.7244 19.8813 19.2956C20.6 19.103 21.1874 18.6652 21.5778 18.0964M3 6V9.5H3.5C5.15685 9.5 6.5 8.15685 6.5 6.5V6H3ZM21 6H17.5V6.5C17.5 8.15685 18.8431 9.5 20.5 9.5H21V6ZM3 18V14.5H3.5C5.15685 14.5 6.5 15.8431 6.5 17.5V18H3ZM15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M21 11.4208V9.5V6H17.5H6.5H3V9.5V14.5V18H6.5H13.2245" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

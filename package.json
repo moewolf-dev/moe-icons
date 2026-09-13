@@ -7,7 +7,7 @@
   "scripts": {
     "docs:check": "node scripts/docs-check.mjs",
     "docs:build": "vitepress build docs",
-    "test": "node --test scripts/test-distribution.mjs"
+    "test": "node --test scripts/test-distribution.mjs scripts/test-release-policy.mjs scripts/test-migrate-public-icons.mjs scripts/test-website-projection.mjs"
   },
   "devDependencies": {
     "gray-matter": "^4.0.3",
