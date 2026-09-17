@@ -16,6 +16,12 @@ for (const [name, value, pattern] of [
 }
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+// The combined free archive lists >1M characters of entries; the default 1 MiB
+// execFileSync buffer overflows (ENOBUFS). Use a bounded, generous buffer so the
+// listing can never be truncated by an unbounded stdout capture.
+const TAR_MAX_BUFFER = 256 * 1024 * 1024;
+const tarList = (path) => execFileSync("tar", ["-tzf", path], { encoding: "utf8", maxBuffer: TAR_MAX_BUFFER });
+const tarRead = (path, entry) => execFileSync("tar", ["-xOzf", path, entry], { maxBuffer: TAR_MAX_BUFFER });
 /** R-P0-10: every archive must ship a matching .sha256 sidecar. */
 const assertSidecar = (filename, expectedSha) => {
   const sidecar = readFileSync(join(directory, `${filename}.sha256`), "utf8").trim();
@@ -53,12 +59,12 @@ const archiveBytes = readFileSync(archivePath);
 if (sha256(archiveBytes) !== descriptor.free.sha256) throw new Error("free archive checksum mismatch");
 assertSidecar(expectedName, descriptor.free.sha256);
 
-const entries = execFileSync("tar", ["-tzf", archivePath], { encoding: "utf8" })
+const entries = tarList(archivePath)
   .split("\n")
   .filter(Boolean);
 const catalogEntry = entries.find((entry) => entry === "catalog.json" || entry === "./catalog.json");
 if (!catalogEntry) throw new Error("free archive is missing catalog.json");
-const catalogBytes = execFileSync("tar", ["-xOzf", archivePath, catalogEntry]);
+const catalogBytes = tarRead(archivePath, catalogEntry);
 if (sha256(catalogBytes) !== descriptor.catalog.sha256) throw new Error("catalog checksum mismatch");
 
 // Validate the metadata archive: must exist, verify checksum/size, and contain
@@ -80,7 +86,7 @@ const metadataBytes = readFileSync(metadataPath);
 if (sha256(metadataBytes) !== metadata.sha256) throw new Error("free metadata archive checksum mismatch");
 assertSidecar(metadataName, metadata.sha256);
 if (metadataBytes.length !== metadata.size) throw new Error("free metadata archive size mismatch");
-const metadataEntries = execFileSync("tar", ["-tzf", metadataPath], { encoding: "utf8" })
+const metadataEntries = tarList(metadataPath)
   .split("\n")
   .filter(Boolean)
   .sort();
@@ -93,7 +99,7 @@ if (JSON.stringify(metadataEntries) !== JSON.stringify(expectedMetadataEntries))
   throw new Error("free metadata archive must contain exactly the frozen metadata files");
 }
 for (const file of expectedMetadataEntries) {
-  const bytes = execFileSync("tar", ["-xOzf", metadataPath, file]);
+  const bytes = tarRead(metadataPath, file);
   const name = file.slice("metadata/".length);
   if (sha256(bytes) !== metadata.files[name].sha256) throw new Error(`metadata ${name} checksum mismatch`);
   if (bytes.length !== metadata.files[name].size) throw new Error(`metadata ${name} size mismatch`);
@@ -111,7 +117,7 @@ const assetsBytes = readFileSync(assetsPath);
 if (sha256(assetsBytes) !== assetsRef.sha256) throw new Error("free assets archive checksum mismatch");
 assertSidecar(assetsName, assetsRef.sha256);
 if (assetsBytes.length !== assetsRef.size) throw new Error("free assets archive size mismatch");
-const assetsEntries = execFileSync("tar", ["-tzf", assetsPath], { encoding: "utf8" })
+const assetsEntries = tarList(assetsPath)
   .split("\n")
   .filter(Boolean)
   .sort();
