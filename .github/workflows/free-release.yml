@@ -205,6 +205,8 @@ jobs:
             --pattern "moe-icons-free-${VERSION}.tgz*" \
             --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-resource-index-${VERSION}.json.gz*" \
+            --pattern "moe-icons-free-resources-${VERSION}.bin*" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/existing"
           node scripts/compare-release.mjs "$RUNNER_TEMP/candidate" "$RUNNER_TEMP/existing" "$VERSION" "$DESCRIPTOR_SHA"
@@ -231,7 +233,11 @@ jobs:
           # R-P0-10: a wrong same-name asset in a draft is deleted and re-uploaded;
           # a published Release is never modified.
           mkdir -p "$RUNNER_TEMP/draft"
-          for asset in \
+          resource_assets=()
+          if node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1])).free.resources ? 0 : 1)" "$RUNNER_TEMP/candidate/release-descriptor.json"; then
+            resource_assets=("moe-icons-free-resource-index-${VERSION}.json.gz" "moe-icons-free-resource-index-${VERSION}.json.gz.sha256" "moe-icons-free-resources-${VERSION}.bin" "moe-icons-free-resources-${VERSION}.bin.sha256")
+          fi
+          for asset in "${resource_assets[@]}" \
             "moe-icons-free-${VERSION}.tgz" \
             "moe-icons-free-${VERSION}.tgz.sha256" \
             "moe-icons-free-assets-${VERSION}.tgz" \
@@ -265,6 +271,8 @@ jobs:
             --pattern "moe-icons-free-${VERSION}.tgz*" \
             --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
+            --pattern "moe-icons-free-resource-index-${VERSION}.json.gz*" \
+            --pattern "moe-icons-free-resources-${VERSION}.bin*" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/uploaded"
           # Recompute every uploaded digest from the Release itself.
@@ -274,7 +282,8 @@ jobs:
             gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json"
           fi
           count="$(gh release view "$tag" --json assets --jq '.assets | length')"
-          test "$count" = "8" || { echo "expected 8 assets on the draft, got $count" >&2; exit 1; }
+          expected_count="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).free.resources ? '12' : '8')" "$RUNNER_TEMP/candidate/release-descriptor.json")"
+          test "$count" = "$expected_count" || { echo "expected $expected_count assets on the draft, got $count" >&2; exit 1; }
 
       - name: Publish the validated Release
         if: steps.switch.outputs.blocked == '0' && steps.dispatchcheck.outputs.write_allowed == '1'

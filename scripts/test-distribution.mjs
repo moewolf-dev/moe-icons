@@ -219,7 +219,7 @@ test("P0-8: free-release.yml is draft-first and publishes only after eight asset
   const workflow = readFileSync(join(ROOT, ".github", "workflows", "free-release.yml"), "utf8");
   const draftAt = workflow.indexOf('gh release create "$tag" --draft');
   const latestAt = workflow.indexOf("write-latest-descriptor.mjs");
-  const countAt = workflow.indexOf('test "$count" = "8"');
+  const countAt = workflow.indexOf('test "$count" = "$expected_count"');
   const publishAt = workflow.indexOf('gh release edit "$tag" --draft=false');
   assert.ok(draftAt >= 0, "must create a draft release");
   assert.ok(latestAt > draftAt, "release-latest.json must be written after the draft exists");
@@ -259,7 +259,7 @@ test("R-P0-10: wrong sidecar and extra asset are rejected", async () => {
       JSON.stringify({ schemaVersion: 1, tier: "free", fullVersion: VERSION, descriptorSha256: sha(readFileSync(join(existing, "release-descriptor.json"))), assets: {} }),
     );
     writeFileSync(join(existing, "extra.tgz"), "extra");
-    await assert.rejects(compareReleaseAssets(local, existing), /exactly eight files/);
+    await assert.rejects(compareReleaseAssets(local, existing), /does not match the descriptor/);
   } finally {
     rmSync(local, { recursive: true, force: true });
     rmSync(existing, { recursive: true, force: true });
@@ -276,4 +276,22 @@ test("P1-7: public workflows pin every action to a commit", () => {
       assert.match(match[1], /@[0-9a-f]{40}$/, `${name}: ${match[1]}`);
     }
   }
+});
+
+function attachSelectedResources(dir,mutate){
+ const descriptor=JSON.parse(readFileSync(join(dir,'release-descriptor.json'),'utf8'));descriptor.free.styleGroups=['moe-outline'];
+ const raw=Buffer.from('export default {};'),bundle=gzipSync(raw),bundleRef={filename:`moe-icons-free-resources-${VERSION}.bin`,size:bundle.length,sha256:sha(bundle)};
+ const index={schemaVersion:1,tier:'free',version:VERSION,artifactSha256:descriptor.free.sha256,bundle:bundleRef,files:{'react/moe-outline/UiSearch.js':{offset:0,compressedSize:bundle.length,size:raw.length,sha256:sha(raw),compressedSha256:sha(bundle),requires:[]}}};mutate?.(index);
+ const bytes=gzipSync(Buffer.from(JSON.stringify(index))),indexRef={filename:`moe-icons-free-resource-index-${VERSION}.json.gz`,size:bytes.length,sha256:sha(bytes)};
+ descriptor.free.resources={schemaVersion:1,index:indexRef,bundle:bundleRef};
+ for(const [ref,content]of [[indexRef,bytes],[bundleRef,bundle]]){writeFileSync(join(dir,ref.filename),content);writeFileSync(join(dir,ref.filename+'.sha256'),`${ref.sha256}  ${ref.filename}\n`);}
+ const json=JSON.stringify(descriptor);writeFileSync(join(dir,'release-descriptor.json'),json);return sha(Buffer.from(json));
+}
+test('N04: publishes all twelve selected assets and rejects mismatched tier/ranges/content',()=>{
+ for(const mutate of [undefined,index=>{index.tier='pro';},index=>{index.files['react/moe-outline/UiSearch.js'].offset=1;},index=>{index.files['react/moe-outline/UiSearch.js'].sha256='a'.repeat(64);},index=>{index.files['react/moe-metal/UiSearch.js']=index.files['react/moe-outline/UiSearch.js'];delete index.files['react/moe-outline/UiSearch.js'];}]){
+  const dir=mkdtempSync(join(tmpdir(),'free-selected-'));try{buildFixture(dir);const digest=attachSelectedResources(dir,mutate);const validate=()=>execFileSync(process.execPath,[join(ROOT,'scripts/validate-free-release.mjs'),dir,VERSION,digest,'a'.repeat(40),'b'.repeat(40)],{stdio:'pipe'});if(mutate)assert.throws(validate);else assert.doesNotThrow(validate);}finally{rmSync(dir,{recursive:true,force:true});}
+ }
+});
+test('N04: idempotent readback includes immutable resources and reports drift',async()=>{
+ const local=mkdtempSync(join(tmpdir(),'selected-local-')),existing=mkdtempSync(join(tmpdir(),'selected-existing-'));try{buildFixture(local);buildFixture(existing);attachSelectedResources(local);attachSelectedResources(existing);assert.deepEqual(await compareReleaseAssets(local,existing),[]);const name=`moe-icons-free-resources-${VERSION}.bin`;writeFileSync(join(existing,name),'changed');assert.ok((await compareReleaseAssets(local,existing)).includes(name));}finally{rmSync(local,{recursive:true,force:true});rmSync(existing,{recursive:true,force:true});}
 });

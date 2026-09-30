@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -125,8 +126,39 @@ if (assetsEntries.length === 0 || assetsEntries.some((line) => !line.startsWith(
   throw new Error("free assets archive must contain only assets/** paths");
 }
 
+const resourceAssets = [];
+if (descriptor.free.resources) {
+  const resources = descriptor.free.resources;
+  if (resources.schemaVersion !== 1) throw new Error("invalid free resources schema");
+  for (const kind of ["index", "bundle"]) {
+    const ref = resources[kind];
+    const expected = kind === "index" ? `moe-icons-free-resource-index-${version}.json.gz` : `moe-icons-free-resources-${version}.bin`;
+    if (!ref || ref.filename !== expected || !/^[a-f0-9]{64}$/.test(ref.sha256) || !Number.isSafeInteger(ref.size) || ref.size < 1) throw new Error(`invalid free resource ${kind} identity`);
+    const bytes = readFileSync(join(directory, expected));
+    if (bytes.length !== ref.size || sha256(bytes) !== ref.sha256) throw new Error(`free resource ${kind} checksum/length mismatch`);
+    assertSidecar(expected, ref.sha256);
+    resourceAssets.push(expected, `${expected}.sha256`);
+  }
+  if(resources.index.size>8*1024*1024)throw new Error("free resource index exceeds 8 MiB");
+  const index=JSON.parse(gunzipSync(readFileSync(join(directory,resources.index.filename)),{maxOutputLength:64*1024*1024}).toString());
+  if(index.schemaVersion!==1||index.tier!=="free"||index.version!==version||index.artifactSha256!==descriptor.free.sha256||index.bundle?.sha256!==resources.bundle.sha256||index.bundle?.size!==resources.bundle.size||index.bundle?.filename!==resources.bundle.filename||!index.files||typeof index.files!=="object"||Array.isArray(index.files))throw new Error("free resource index identity mismatch");
+  const bundle=readFileSync(join(directory,resources.bundle.filename)),names=Object.keys(index.files),folded=new Set(),intervals=[];
+  if(!names.length||names.length>250000)throw new Error("invalid free indexed resource count");
+  for(const name of names){
+    const entry=index.files[name],parts=name.split("/");
+    if(!/^(react|vue|vanilla|assets)\/[A-Za-z0-9_./-]+$/.test(name)||parts.some(part=>!part||part==="."||part==="..")||folded.has(name.toLowerCase())||!entry||typeof entry!=="object"||Array.isArray(entry))throw new Error("unsafe free resource path");
+    folded.add(name.toLowerCase());
+    if(name!=="assets/manifest.json"&&!/^(react|vue|vanilla)\/(?:types\.d\.ts|(?:index|runtime)\.(?:js|cjs|d\.ts))$/.test(name)&&!descriptor.free.styleGroups.includes(parts[1]))throw new Error("free resource contains unauthorized style group");
+    if(![entry.offset,entry.compressedSize,entry.size].every(Number.isSafeInteger)||entry.offset<0||entry.compressedSize<1||entry.size<0||entry.size>32*1024*1024||!Array.isArray(entry.requires)||entry.requires.some(dep=>typeof dep!=="string"||!Object.hasOwn(index.files,dep)||dep.split("/")[0]!==parts[0]))throw new Error("invalid free resource entry");
+    const end=entry.offset+entry.compressedSize;if(!Number.isSafeInteger(end)||end>bundle.length)throw new Error("free resource range escapes bundle");intervals.push([entry.offset,end]);
+    const compressed=bundle.subarray(entry.offset,end);if(sha256(compressed)!==entry.compressedSha256)throw new Error("free compressed resource digest mismatch");
+    const bytes=gunzipSync(compressed,{maxOutputLength:Math.max(1,entry.size)});if(bytes.length!==entry.size||sha256(bytes)!==entry.sha256)throw new Error("free resource digest/size mismatch");
+  }
+  for(const name of folded){const parts=name.split("/");for(let i=1;i<parts.length;i++)if(folded.has(parts.slice(0,i).join("/")))throw new Error("free resource file/directory collision");}
+  intervals.sort((a,b)=>a[0]-b[0]);if(intervals[0][0]!==0||intervals.at(-1)[1]!==bundle.length||intervals.some((range,i)=>i>0&&range[0]!==intervals[i-1][1]))throw new Error("free resource ranges overlap or leave unindexed bytes");
+}
 const unexpected = readdirSync(directory).filter(
-  (name) => ![expectedName, `${expectedName}.sha256`, metadataName, `${metadataName}.sha256`, assetsName, `${assetsName}.sha256`, "release-descriptor.json"].includes(name),
+  (name) => ![expectedName, `${expectedName}.sha256`, metadataName, `${metadataName}.sha256`, assetsName, `${assetsName}.sha256`, "release-descriptor.json", ...resourceAssets].includes(name),
 );
 if (unexpected.some((name) => name.includes("pro"))) throw new Error("candidate artifact contains a pro asset");
 process.stdout.write(

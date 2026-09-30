@@ -23,11 +23,17 @@ export function compareReleaseAssets(localDir, existingDir, version, descriptorS
   const assets = `moe-icons-free-assets-${version}.tgz`;
   const names = [code, `${code}.sha256`, assets, `${assets}.sha256`, metadata, `${metadata}.sha256`, "release-descriptor.json"];
 
-  // R-P0-10: a published Release must contain exactly the eight assets.
+  const descriptor=JSON.parse(readFileSync(join(localDir,"release-descriptor.json"),"utf8"));
+  if(descriptor.free.resources)for(const [kind,ref]of Object.entries({index:descriptor.free.resources.index,bundle:descriptor.free.resources.bundle})){
+    const expected=kind==="index"?`moe-icons-free-resource-index-${version}.json.gz`:`moe-icons-free-resources-${version}.bin`;
+    if(ref?.filename!==expected)throw new Error("invalid immutable Free resource filename");
+    names.push(ref.filename,`${ref.filename}.sha256`);
+  }
+  // Published releases have eight legacy assets or twelve selected assets.
   const required = [...names, "release-latest.json"].sort();
   const existingNames = readdirSync(existingDir).sort();
   if (JSON.stringify(existingNames) !== JSON.stringify(required)) {
-    throw new Error(`existing release asset set is not exactly eight files: ${existingNames.join(", ")}`);
+    throw new Error(`existing release asset set does not match the descriptor: ${existingNames.join(", ")}`);
   }
 
   const drifted = [];
