@@ -64,9 +64,9 @@ CLI workflow works until the [CLI release status](/cli#release-status) notes it.
 
 The code packages are published under Apache-2.0. Free icon assets follow the
 [license shown on the pricing page](https://moeicons.com/pricing); Pro assets
-require a valid license. The private `moewolf-dev/moe-icons-library` repository
-is the icon source of truth; the public `moe-icons` repository carries the four
-Free style groups plus these docs.
+require a valid license. The four Free style groups and these docs live in the
+public `moe-icons` repository; Pro assets are available through a licensed
+account.
 
 ## Next steps
 

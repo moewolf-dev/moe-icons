@@ -1,8 +1,8 @@
 # Free vs Pro
 
 Moe Icons has a Free tier that needs no account and a Pro tier that unlocks the
-remaining style groups with a one-time license. This page summarises the
-differences and how Pro activation works.
+remaining style groups. This page summarises the differences and how to use each
+tier.
 
 ## Comparison
 
@@ -11,73 +11,63 @@ differences and how Pro activation works.
 | Style groups | `moe-outline`, `moe-lite-outline`, `moe-solid`, `moe-colored` | All groups: adds `moe-3d-metal`, `moe-duotone`, `moe-pixel-lite-outline`, `moe-pixel-outline`, `moe-pixel-solid`, `moe-sticker` |
 | Icon count | 554 per group | 554 per group |
 | Formats | SVG | SVG plus bitmap PNG/WebP (3D metal, 128/256/512) |
-| Targets | React, Vue, Vanilla, raw assets | React, Vue, raw assets (bitmap is not available for Vanilla) |
-| CLI | `moeicons install free` | `moeicons install pro` after login |
-| Website search | Browse and download Free groups | Browse and download every group |
-| Updates | Free line | Lifetime access to the Pro library, including future additions |
-| Support | Community | Per the plan listed on the pricing page |
+| Available now via | npm component package (Moe Outline) and website downloads | Website downloads for an active Pro account |
+| Website search | Browse, copy and download Free groups | Browse, copy and download every group |
+| Updates | Free line | Per the license shown at purchase |
 | Price | Free | One-time payment |
 
 The website [pricing page](https://moeicons.com/pricing) is the source of truth
-for the current price and license text. At the time of writing (2026-10-01) the
-Pro plan is a one-time purchase shown as **$39 USD** with lifetime access. It is
-not a subscription. Always confirm the live price on the pricing page.
+for the current price and product description. The license shown at checkout
+("Moe Icons License Agreement") is the source of truth for usage rights. At the
+time of writing (2026-10-01) the Pro plan is a one-time purchase shown as
+**$39 USD**. Confirm the live price on the pricing page.
+
+The CLI (`moeicons install free` / `install pro`) is **experimental and not
+consumable yet**; do not use it as your integration path. See
+[CLI release status](/cli#release-status).
 
 ## Free access
 
 - No account or login is required.
-- `npx moeicons install free` downloads and verifies the Free release.
-- The website serves Free SVG previews anonymously from its public asset host.
+- Use the published components (`moe-icons/react`, `moe-icons/vue`) for the Moe
+  Outline style set. See [Quick start](/getting-started).
+- Download the other Free groups from the [search page](/website-search).
 
 ## Pro access
 
 ### Purchase and activate
 
 1. Go to [moeicons.com/pricing](https://moeicons.com/pricing).
-2. Click **Buy Moeicons Pro**. If you are signed out, you are sent through login
-   first, then asked to confirm the purchase.
+2. Click **Buy Moeicons Pro**. If you are signed out, sign in first, then
+   confirm the purchase.
 3. Complete payment on the provider's hosted checkout page.
-4. The `payment-success` page polls your entitlement for up to 30 seconds and
-   confirms activation. Entitlement is granted by the server webhook, not by
-   the browser.
+4. Return to the site and wait for your account to become active, then open
+   [moeicons.com/account](https://moeicons.com/account).
 
 ### Using Pro resources
 
-The published component package (`moe-icons@0.0.17`) contains only the default
-style set, so Pro groups are not available through it. On the website, an
-active Pro account unlocks every group for browsing, copy and download. See
-[Website search](/website-search).
+On the website, an active Pro account unlocks every group for browsing, copy
+and download. Pro groups are not part of the published npm component package,
+which ships only the Moe Outline set.
 
-The CLI offers `login` / `install pro`, but its `0.0.1` release is not
-consumable with the published packages. See
-[CLI release status](/cli#release-status).
+### Allowed uses
 
-### Check your entitlement
+- **In your own products:** the license permits integrating the icons in
+  software, apps, websites and other materials you own or control. See the
+  license text shown at checkout.
+- **Never publish credentials:** do not put account tokens or other credentials
+  in front-end source or a public repository. This is a security rule, not a
+  restriction on using the icons.
+- **No standalone redistribution:** do not resell or redistribute the icons, or
+  let others extract them as individual files. See the license for the exact
+  terms.
 
-```sh
-npx moeicons account
-```
+Do not rely on this page for legal terms. The license at checkout and the
+[Terms of Service](https://moeicons.com/terms) are the authoritative texts.
 
-Or open [moeicons.com/account](https://moeicons.com/account), which is available
-only to active Pro accounts.
+## Account state
 
-## License and safety
-
-- The Pro license is for the icon resources; purchasing also requires accepting
-  the terms shown at checkout.
-- Never embed Pro credentials or tokens in front-end source. The CLI stores
-  sessions in the OS keychain and keeps tokens out of project files.
-- Pro assets are delivered through an entitlement-checked endpoint. Previewing
-  a Pro icon on the website does not by itself grant download rights.
-
-## Downgrade and expiry
-
-When an entitlement is no longer active:
-
-- The website closes the detail view, aborts in-flight Pro requests, revokes
-  downloaded blobs and re-locks Pro groups.
-- The CLI blocks new Pro installs and updates but keeps cached archives on
-  disk. Re-authenticate with `moeicons login` to regain access.
-
-Existing generated files in your project are not deleted automatically; remove
-them yourself if your license ends.
+- Group access follows your account entitlement. If a group is locked, the
+  account is not active or does not cover that group.
+- If access ends, the website locks Pro groups again. What you may keep and use
+  is defined by the license text, not by this page.

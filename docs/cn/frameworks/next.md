@@ -7,9 +7,9 @@ Next.js 支持直接使用已发布的 `moe-icons@0.0.17` 组件。没有 Provid
 
 | 项目 | 状态 |
 | --- | --- |
-| App Router | 直接组件可用 |
-| Pages Router | 直接组件可用 |
-| Server Components | 组件是无 hook 函数，可在服务端渲染 |
+| App Router | 手工示例；未做生产构建/渲染验证 |
+| Pages Router | 手工示例；未验证 |
+| Server Components | 未在真实 Next 构建中验证 |
 | 自动根包装 | 未提供 |
 | `next/image` 与位图 | 未验证 |
 

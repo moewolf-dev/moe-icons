@@ -4,10 +4,10 @@ The website icon browser at [moeicons.com/search](https://moeicons.com/search)
 lets you find an icon, preview it in the available styles, copy integration
 code and download assets. This page walks through the flow.
 
-## Support status
+## Availability
 
-The browser is behind a site feature flag. If it is disabled in a deployment,
-the page shows "The new icon browser is not enabled in this deployment yet."
+The icon browser may be disabled in some deployments. When it is off, the page
+reports that the browser is not enabled in that deployment.
 
 ## The flow
 
@@ -32,12 +32,10 @@ bookmarked. Back/forward and refresh restore the state.
 ### 3. Preview
 
 - Scrolling loads previews lazily; icons off-screen are not requested.
-- For the four Free SVG groups, previews are served anonymously from the public
-  asset host.
-- Pro and bitmap groups load through the entitlement-checked API; a locked
-  group never issues catalog or asset requests.
-- Use the colour settings popover to recolour a preview locally without new
-  requests.
+- The four Free SVG groups can be previewed without an account.
+- Pro and bitmap groups require an active Pro account; a locked group shows no
+  icons.
+- Use the colour settings popover to recolour a preview locally.
 
 ### 4. Copy code or download
 
@@ -48,19 +46,50 @@ Click an icon to open the detail modal. It offers:
 - **Download** the SVG (vector groups) or a bitmap variant
   (`128-webp`, `256-webp`, and so on).
 
-The modal does not currently have a dedicated "copy ID" button. To integrate a
-single icon, copy the generated code; to integrate the whole set, use the
-[CLI](/cli).
+There is no dedicated "copy ID" button; copy the generated code or read the
+name from the card.
 
-### 5. Integrate in your project
+### 5. Put an icon in your project
 
-- **Component package:** copy the icon's PascalCase name and import it from
-  `moe-icons/react` or `moe-icons/vue` (the published package ships the Moe
-  Outline set). See [Quick start](/getting-started).
-- **Any Free style group:** download the SVG and use it directly, or swap the
-  file when you change style. See [Vanilla & assets](/frameworks/vanilla).
-- **Single snippet:** paste the copied code, adjusting the import path to your
-  setup.
+Use the published component package for the Moe Outline set, or download an SVG
+for any other Free group.
+
+**React (component package):**
+
+```tsx
+import { UiSearch } from 'moe-icons/react';
+
+export function Search() {
+  return <UiSearch width={24} height={24} aria-label="Search" />;
+}
+```
+
+**Vue (component package):**
+
+```vue
+<script setup lang="ts">
+import { UiSearch } from 'moe-icons/vue';
+</script>
+
+<template>
+  <UiSearch width="24" height="24" aria-label="Search" />
+</template>
+```
+
+**Downloaded SVG (any Free group):**
+
+1. Download `ui-search.svg`.
+2. Place it in your static/public folder, for example
+   `public/icons/moe-outline/ui-search.svg`.
+3. Reference it:
+
+```html
+<img src="/icons/moe-outline/ui-search.svg" alt="Search" width="24" height="24" />
+```
+
+To let the SVG follow the text colour, inline the file contents you downloaded
+rather than using `<img>`. Only inline SVG you obtained from the official site
+or package; do not inject arbitrary remote SVG.
 
 The CLI would generate multi-style proxies, but its `0.0.1` release is not yet
 consumable. See [CLI status](/cli#release-status).
@@ -71,18 +100,17 @@ consumable. See [CLI status](/cli#release-status).
 | --- | --- | --- |
 | Signed out | Browse, preview, copy, download | Locked; gate offers Login and Pricing |
 | Free (signed in) | Browse, preview, copy, download | Locked; gate offers Pricing |
-| Pro (active entitlement) | Full access | Browse, preview, copy, download |
+| Pro (active) | Full access | Browse, preview, copy, download |
 
-Authorization is enforced by the server. The client never decides whether a
-group is unlocked; it only renders the `locked` flag returned by the API and
-never requests assets for a locked group.
+Whether a group is unlocked follows your account status; a locked group shows a
+gate instead of icons.
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 | --- | --- |
-| No icons appear | The icon browser feature flag is off in that deployment. |
-| A group shows a lock | It is Pro-only or your entitlement is not active. Sign in or check [Free vs Pro](/free-vs-pro). |
-| A bitmap variant is missing | Choose a supported `format`/`size`, or use the CLI to install the exact variant. |
-| Download fails | Retry; a locked or expired entitlement returns 403. Sign in again. |
+| No icons appear | The icon browser may be disabled in a deployment. |
+| A group shows a lock | It is Pro-only or your account is not active. See [Free vs Pro](/free-vs-pro). |
+| A bitmap variant is missing | Choose a `format`/`size` the group offers. |
+| Download fails | Retry; sign in again if your account is not active. |
 | Deep link shows the wrong state | The URL restores `q`, `style` and `category`; reload after signing in. |
