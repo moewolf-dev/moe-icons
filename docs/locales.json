@@ -6,16 +6,102 @@
       "label": "English",
       "lang": "en",
       "link": "/",
-      "nav": [{ "text": "Home", "link": "/" }],
-      "sidebar": []
+      "nav": [
+        { "text": "Guide", "link": "/getting-started" },
+        { "text": "CLI", "link": "/cli" },
+        { "text": "Frameworks", "link": "/frameworks/react" },
+        { "text": "Free vs Pro", "link": "/free-vs-pro" },
+        { "text": "FAQ", "link": "/faq" },
+        { "text": "Website", "link": "https://moeicons.com" }
+      ],
+      "sidebar": [
+        {
+          "text": "Introduction",
+          "items": [
+            { "text": "Overview", "link": "/introduction" },
+            { "text": "Quick start", "link": "/getting-started" }
+          ]
+        },
+        {
+          "text": "Guide",
+          "items": [
+            { "text": "Installation", "link": "/installation" },
+            { "text": "Usage", "link": "/usage" },
+            { "text": "Configuration", "link": "/configuration" },
+            { "text": "Website search", "link": "/website-search" },
+            { "text": "Free vs Pro", "link": "/free-vs-pro" }
+          ]
+        },
+        {
+          "text": "CLI",
+          "items": [{ "text": "Commands", "link": "/cli" }]
+        },
+        {
+          "text": "Frameworks",
+          "items": [
+            { "text": "React", "link": "/frameworks/react" },
+            { "text": "Vue", "link": "/frameworks/vue" },
+            { "text": "Next.js", "link": "/frameworks/next" },
+            { "text": "Nuxt", "link": "/frameworks/nuxt" },
+            { "text": "Vanilla & assets", "link": "/frameworks/vanilla" }
+          ]
+        },
+        {
+          "text": "Help",
+          "items": [{ "text": "FAQ & troubleshooting", "link": "/faq" }]
+        }
+      ]
     },
     {
       "slug": "cn",
       "label": "简体中文",
       "lang": "zh-CN",
       "link": "/cn/",
-      "nav": [{ "text": "首页", "link": "/cn/" }],
-      "sidebar": []
+      "nav": [
+        { "text": "指南", "link": "/cn/getting-started" },
+        { "text": "CLI", "link": "/cn/cli" },
+        { "text": "框架", "link": "/cn/frameworks/react" },
+        { "text": "免费与付费", "link": "/cn/free-vs-pro" },
+        { "text": "Q&A", "link": "/cn/faq" },
+        { "text": "官网", "link": "https://moeicons.com" }
+      ],
+      "sidebar": [
+        {
+          "text": "介绍",
+          "items": [
+            { "text": "图标库介绍", "link": "/cn/introduction" },
+            { "text": "快速开始", "link": "/cn/getting-started" }
+          ]
+        },
+        {
+          "text": "指南",
+          "items": [
+            { "text": "安装方式", "link": "/cn/installation" },
+            { "text": "使用方式", "link": "/cn/usage" },
+            { "text": "配置文件", "link": "/cn/configuration" },
+            { "text": "官网搜索", "link": "/cn/website-search" },
+            { "text": "免费与付费", "link": "/cn/free-vs-pro" }
+          ]
+        },
+        {
+          "text": "CLI",
+          "items": [{ "text": "命令", "link": "/cn/cli" }]
+        },
+        {
+          "text": "前端框架",
+          "items": [
+            { "text": "React", "link": "/cn/frameworks/react" },
+            { "text": "Vue", "link": "/cn/frameworks/vue" },
+            { "text": "Next.js", "link": "/cn/frameworks/next" },
+            { "text": "Nuxt", "link": "/cn/frameworks/nuxt" },
+            { "text": "Vanilla 与原始资源", "link": "/cn/frameworks/vanilla" }
+          ]
+        },
+        {
+          "text": "帮助",
+          "items": [{ "text": "Q&A 与故障排查", "link": "/cn/faq" }]
+        }
+      ]
     }
   ]
 }

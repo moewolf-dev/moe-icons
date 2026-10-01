@@ -1,26 +1,25 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
   name: "Moe Icons"
-  text: "免费文档"
-  tagline: Moe Icons SVG 图标库的官方 Free 文档
+  text: "开发者文档"
+  tagline: 554 个语义化 SVG 图标，已发布的 React/Vue 组件包，以及官网搜索与下载。
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /cn/markdown-examples
+      text: 快速开始
+      link: /cn/getting-started
     - theme: alt
-      text: API Examples
-      link: /cn/api-examples
+      text: 安装方式
+      link: /cn/installation
 
 features:
-  - title: 静态与动态 SVG
-    details: 原生 SVG 图标，静态与动态变体成对关联
-  - title: 框架即用
-    details: 提供 React、Vue 等常见 UI 框架的模板
+  - title: 同一 ID，多种样式
+    details: 同一个语义化图标 ID（例如 ui-search）在多个样式组中存在。官网可预览并下载各免费样式组。
+  - title: 免费与付费
+    details: 4 个样式组免费。Pro 解锁位图 3D 金属、双色调、像素和贴纸等样式。
+  - title: 已发布的 React/Vue 组件
+    details: moe-icons 包提供 React 与 Vue 组件；尺寸、颜色与无障碍属性按 SVG 约定使用。
   - title: 公开唯一正文源
-    details: Free 文档正文在公开 moe-icons 仓库维护
-  - title: 审核后发布
-    details: 文档更新经过人工审核后才会发布到官网
+    details: 本文档在公开的 moe-icons 仓库维护，经审核后镜像到 moeicons.com。
 ---
