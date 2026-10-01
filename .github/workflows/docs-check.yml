@@ -1,3 +1,14 @@
+# Public documentation gate.
+#
+# `npm run docs:check` enforces the public-content policy in
+# scripts/docs-check.mjs (forbidden internal/ops terms, secret patterns,
+# frontmatter, relative links, locale registry). `docs:build` must also pass.
+#
+# KNOWN GAP (AUDIT-2026-10-01-PUBLISHED-DOCS-CONTENT-SECURITY): this job is
+# path-filtered, so on `main` it does not run for commits that do not touch the
+# listed paths, and it is not a required check on the `protect-main-release-policy`
+# ruleset. Treat it as advisory until a non-path-filtered required check is
+# added and the ruleset requires it. Do not weaken this job's checks.
 name: Docs check
 
 on:

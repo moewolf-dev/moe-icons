@@ -8,7 +8,7 @@ certified.
 
 | Item | Status |
 | --- | --- |
-| Nuxt 3 SSR | Direct components usable |
+| Nuxt 3 SSR | Manual example; no production build/hydration verification |
 | Auto-imports | Not provided |
 | Theme/Provider | Not provided by the published package |
 | Bitmap assets | Not verified |

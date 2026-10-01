@@ -21,8 +21,8 @@ SVG 使用 `stroke="currentColor"` / `fill="none"`。设置父级 `color`，或�
 `color`/`stroke`/`fill`。CSS 中硬编码的 `fill` 会优先。
 
 **能用同一图标的两种样式吗？**
-已发布包不行（单一集）。请从[搜索页](/cn/website-search)下载其他免费样式组的 SVG，
-或等待 CLI。
+已发布包不行（单一集）。请从[搜索页](/cn/website-search)下载各免费样式组的 SVG。CLI
+代理路径尚不可用，见 [CLI 发布状态](/cn/cli#发布状态)。
 
 ## 包与依赖
 
@@ -61,7 +61,7 @@ import type { ReactIconProps, VueIconProps } from 'moe-icons';
 正确。请复制生成的代码，或从卡片读取 ID。见[官网搜索](/cn/website-search)。
 
 **位图变体缺失/下载失败。**
-选择受支持的 `format`/`size`；锁定或过期授权返回 403。登录后刷新。
+选择该组提供的 `format`/`size`；账号未激活时请重新登录后再试。
 
 ## CLI
 
@@ -86,11 +86,13 @@ import type { ReactIconProps, VueIconProps } from 'moe-icons';
 ## Pro
 
 **如何获得 Pro？**
-在 [moeicons.com/pricing](https://moeicons.com/pricing) 购买；服务端 webhook 激活
-授权，`/payment-success` 轮询确认。见[免费与付费](/cn/free-vs-pro)。
+在 [moeicons.com/pricing](https://moeicons.com/pricing) 购买，然后返回站点等待账号
+激活。见[免费与付费](/cn/free-vs-pro)。
 
-**能把 Pro 资源嵌入前端吗？**
-不能。请勿把凭据或需授权的资源嵌入前端源码。
+**能把 Pro 图标用于自有产品吗？**
+可以，以结账时展示的许可为限：可在你拥有或控制的产品中集成图标。不得把账号凭据写入
+前端源码，也不得把图标作为独立资源库再分发。确切条款见[免费与付费](/cn/free-vs-pro)
+与许可文本。
 
 ## 资源与部署
 

@@ -58,8 +58,8 @@ npm 组件包与多样式 CLI 是不同产品。已发布包不能切换样式�
 ## 许可与来源
 
 代码包以 Apache-2.0 发布。免费图标资源遵循[价格页所示许可](https://moeicons.com/pricing)；
-Pro 资源需要有效授权。私有 `moewolf-dev/moe-icons-library` 仓库是图标事实源；公开
-`moe-icons` 仓库承载四个免费样式组及本文档。
+Pro 资源需要有效授权。四个免费样式组及本文档位于公开 `moe-icons` 仓库；Pro 资源通过
+已授权账号获取。
 
 ## 下一步
 

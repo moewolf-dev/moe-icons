@@ -22,8 +22,9 @@ The SVG uses `stroke="currentColor"` / `fill="none"`. Set a parent `color`, or
 override `color`/`stroke`/`fill`. Hard-coded `fill` in your CSS wins.
 
 **Can I use two styles of the same icon?**
-Not from the published package (single style). Download the other Free group's
-SVG from the [search page](/website-search), or wait for the CLI.
+Not from the published package (single style). Download each Free group's SVG
+from the [search page](/website-search). The CLI proxy path is not yet
+consumable; see [CLI release status](/cli#release-status).
 
 ## Package and dependencies
 
@@ -94,12 +95,16 @@ The `0.0.1` bundled catalog treats `moe-colored` as Pro-only. Use
 ## Pro
 
 **How do I get Pro?**
-Buy on [moeicons.com/pricing](https://moeicons.com/pricing); the server webhook
-activates your entitlement and `/payment-success` polls for it. See
+Buy on [moeicons.com/pricing](https://moeicons.com/pricing), then return to the
+site and wait for your account to become active. See
 [Free vs Pro](/free-vs-pro).
 
-**Can I embed Pro resources in the front end?**
-No. Do not embed credentials or token-gated assets in front-end source.
+**Can I use Pro icons in my own product?**
+Yes, within the license shown at checkout: you may integrate the icons in
+products you own or control. You must not put account credentials in
+front-end source, and you must not redistribute the icons as a standalone
+resource library. See [Free vs Pro](/free-vs-pro) and the license text for the
+exact terms.
 
 ## Assets and deployment
 

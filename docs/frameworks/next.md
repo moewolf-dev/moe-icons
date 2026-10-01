@@ -8,9 +8,9 @@ not certified.
 
 | Item | Status |
 | --- | --- |
-| App Router | Direct components usable |
-| Pages Router | Direct components usable |
-| Server Components | Components are hook-free functions and can render on the server |
+| App Router | Manual example; no production build/render verification |
+| Pages Router | Manual example; not verified |
+| Server Components | Not verified in a real Next build |
 | Automatic root wrapping | Not provided |
 | `next/image` with bitmap assets | Not verified |
 

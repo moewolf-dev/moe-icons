@@ -4,6 +4,11 @@
 #
 # This script only mirrors files. It never commits, pushes, or reads secrets.
 # Callers (GitHub Actions) are responsible for any git operations.
+#
+# Content policy: everything mirrored here is published. `docs:check`
+# (scripts/docs-check.mjs) must pass before this runs; it rejects internal
+# repository/audit names, credentials and internal operations detail. Never
+# relax that gate to make a sync succeed.
 set -euo pipefail
 
 usage() {

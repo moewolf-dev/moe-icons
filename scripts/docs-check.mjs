@@ -51,8 +51,47 @@ for (const f of files) {
   }
 }
 
-// 3. Markdown checks: non-empty, parseable frontmatter, resolvable local links.
 const mdFiles = files.filter((f) => f.endsWith('.md'))
+
+// 3. Public-content policy (see the "Public content rules" section in
+// docs/README.md). The public documentation must never expose internal
+// sources, audit/planning files, credentials, or operations detail a reader
+// does not need. When a new class of leak is found, add it here so it cannot
+// reappear. `docs/README.md` is repository-only (excluded from sync and not
+// published), so only published Markdown is checked against the content list.
+const FORBIDDEN_CONTENT = [
+  { re: /moe-?icons-library/i, why: 'private icon source repository name' },
+  { re: /\bwebhook\b/i, why: 'payment/operations implementation detail' },
+  { re: /\bfeature[ -]?flag/i, why: 'internal feature flag' },
+  { re: /\bpresign/i, why: 'private delivery detail' },
+  { re: /\bR2\b/, why: 'storage infrastructure detail' },
+  { re: /\bbucket\b/i, why: 'storage infrastructure detail' },
+  { re: /user[_-]?data|website-delivery/i, why: 'private storage/bucket name' },
+  { re: /AUDIT-\d{4}-\d{2}-\d{2}/i, why: 'internal audit file name' },
+  { re: /TODO-\d{4}-\d{2}-\d{2}/i, why: 'internal planning file name' },
+  { re: /evidence\/docs-/i, why: 'internal evidence path' },
+  { re: /coordination workspace/i, why: 'private coordination workspace' },
+]
+const SECRET_CONTENT = [
+  { re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/, why: 'private key material' },
+  { re: /AKIA[0-9A-Z]{16}/, why: 'AWS access key id' },
+  { re: /gh[pousr]_[A-Za-z0-9]{20,}/, why: 'GitHub token' },
+  { re: /sk_live_[A-Za-z0-9]{10,}/, why: 'Stripe live secret' },
+  { re: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/, why: 'JWT' },
+]
+for (const f of mdFiles) {
+  const r = rel(f)
+  const raw = readFileSync(f, 'utf8')
+  for (const { re, why } of SECRET_CONTENT) {
+    if (re.test(raw)) errors.push(`${r}: possible secret (${why})`)
+  }
+  if (r === 'README.md') continue // repository-only, not published
+  for (const { re, why } of FORBIDDEN_CONTENT) {
+    if (re.test(raw)) errors.push(`${r}: forbidden public content (${why})`)
+  }
+}
+
+// 4. Markdown checks: non-empty, parseable frontmatter, resolvable local links.
 for (const f of mdFiles) {
   const r = rel(f)
   const raw = readFileSync(f, 'utf8')

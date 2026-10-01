@@ -3,10 +3,9 @@
 官网图标浏览器 [moeicons.com/search](https://moeicons.com/search) 可查找图标、
 预览各样式、复制接入代码并下载资源。本页说明该流程。
 
-## 支持状态
+## 可用性
 
-浏览器受站点功能开关控制。若某部署关闭了该开关，页面会显示“The new icon browser
-is not enabled in this deployment yet.”。
+部分部署可能关闭图标浏览器。关闭时页面会提示该部署未启用浏览器。
 
 ## 流程
 
@@ -30,9 +29,9 @@ URL 保留 `?q=`、`?style=`、`?category=`，因此搜索可分享或收藏。�
 ### 3. 预览
 
 - 滚动时懒加载预览；屏幕外图标不会发起请求。
-- 四个免费 SVG 样式组的预览匿名来自公开资源主机。
-- Pro 与位图组经授权校验的 API 加载；锁定组不会发起目录或资源请求。
-- 使用颜色设置弹窗可在本地重新着色，不产生新请求。
+- 四个免费 SVG 样式组无需账号即可预览。
+- Pro 与位图组需要有效 Pro 账号；锁定组不显示图标。
+- 使用颜色设置弹窗可在本地重新着色。
 
 ### 4. 复制代码或下载
 
@@ -42,17 +41,46 @@ URL 保留 `?q=`、`?style=`、`?category=`，因此搜索可分享或收藏。�
   图标与样式生成。
 - **下载**：矢量组为 SVG，位图变体为 `128-webp`、`256-webp` 等。
 
-弹窗目前没有独立的“复制 ID”按钮。接入单个图标请复制生成的代码；接入整套请使用
-[CLI](/cn/cli)。
+没有独立的“复制 ID”按钮；请复制生成的代码，或从卡片读取名称。
 
-### 5. 接入项目
+### 5. 将图标放入项目
 
-- **组件包：** 复制图标的 PascalCase 名称，从 `moe-icons/react` 或
-  `moe-icons/vue` 导入（已发布包提供 Moe Outline 集）。见
-  [快速开始](/cn/getting-started)。
-- **任意免费样式组：** 下载 SVG 直接使用，切换样式时替换文件。见
-  [Vanilla 与原始资源](/cn/frameworks/vanilla)。
-- **单个代码片段：** 粘贴复制的代码，并按项目调整导入路径。
+Moe Outline 集使用已发布组件包；其他免费组下载 SVG。
+
+**React（组件包）：**
+
+```tsx
+import { UiSearch } from 'moe-icons/react';
+
+export function Search() {
+  return <UiSearch width={24} height={24} aria-label="Search" />;
+}
+```
+
+**Vue（组件包）：**
+
+```vue
+<script setup lang="ts">
+import { UiSearch } from 'moe-icons/vue';
+</script>
+
+<template>
+  <UiSearch width="24" height="24" aria-label="Search" />
+</template>
+```
+
+**下载的 SVG（任意免费组）：**
+
+1. 下载 `ui-search.svg`。
+2. 放入静态/公共目录，例如 `public/icons/moe-outline/ui-search.svg`。
+3. 引用：
+
+```html
+<img src="/icons/moe-outline/ui-search.svg" alt="Search" width="24" height="24" />
+```
+
+若要让 SVG 随文字颜色变化，请内联你下载的文件内容，而不是用 `<img>`。只内联来自
+官网或官方包的 SVG，不要注入任意远端 SVG。
 
 CLI 会生成多样式代理，但其 `0.0.1` 版本尚不可用。见 [CLI 状态](/cn/cli#发布状态)。
 
@@ -62,17 +90,16 @@ CLI 会生成多样式代理，但其 `0.0.1` 版本尚不可用。见 [CLI 状�
 | --- | --- | --- |
 | 未登录 | 浏览、预览、复制、下载 | 锁定；引导面板提供 Login 与 Pricing |
 | 免费（已登录） | 浏览、预览、复制、下载 | 锁定；引导面板提供 Pricing |
-| Pro（授权有效） | 全部可用 | 浏览、预览、复制、下载 |
+| Pro（已激活） | 全部可用 | 浏览、预览、复制、下载 |
 
-授权由服务端强制。客户端不决定组是否解锁，只渲染 API 返回的 `locked` 标记，且
-不会为锁定组请求资源。
+组是否解锁跟随账号状态；锁定组显示引导面板而非图标。
 
 ## 故障排查
 
 | 现象 | 原因 / 处理 |
 | --- | --- |
-| 看不到图标 | 该部署关闭了图标浏览器功能开关。 |
-| 某组显示锁 | 该组仅 Pro，或你的授权未生效。登录或查看[免费与付费](/cn/free-vs-pro)。 |
-| 位图变体缺失 | 选择受支持的 `format`/`size`，或用 CLI 安装精确变体。 |
-| 下载失败 | 重试；锁定或过期授权返回 403。请重新登录。 |
+| 看不到图标 | 该部署可能关闭了图标浏览器。 |
+| 某组显示锁 | 该组仅 Pro，或账号未激活。见[免费与付费](/cn/free-vs-pro)。 |
+| 位图变体缺失 | 选择该组提供的 `format`/`size`。 |
+| 下载失败 | 重试；账号未激活请重新登录。 |
 | 深层链接状态错误 | URL 会恢复 `q`、`style`、`category`；登录后请刷新。 |

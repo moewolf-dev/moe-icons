@@ -59,10 +59,28 @@ mirrored to the private website repository and published to
   404s (missing `release-descriptor.json.sha256`) and it generated proxies that
   import unpublished `moe-icons/free|pro/...` subpaths — keep that limitation
   stated. Next.js and Nuxt are manual/uncertified; Windows is not certified.
-- Keep the coordination-workspace audit record
-  (`AUDIT-2026-10-01-DOCS-AUTHORING-PUBLISHING.md`) in sync. Do not reintroduce
-  removed claims such as a `size` prop, Provider `defaultTheme`/`onThemeChange`,
-  `downloadMode`, theme-level `icons`, or a Vanilla `runtime.ts`.
+- Do not reintroduce removed claims such as a `size` prop, Provider
+  `defaultTheme`/`onThemeChange`, `downloadMode`, theme-level `icons`, or a
+  Vanilla `runtime.ts`.
+
+## Public content rules (do not publish)
+
+These rules are enforced by `scripts/docs-check.mjs`. Keep them in mind for any
+new page:
+
+- No private/internal repository names, internal audit or evidence file names,
+  TODO links, or coordination-workspace paths.
+- No credentials, tokens, API keys, private bucket names or URLs, or anything
+  that could reach paid assets without a license.
+- No internal operations detail that a reader does not need (payment
+  processors, webhook/polling mechanics, feature-flag names, revocation
+  internals, infrastructure topology).
+- No overstated support: mark framework targets that have not passed a real
+  production build/render as unverified.
+- Separate security rules ("never publish credentials") from license rules
+  ("what you may build with the icons"); defer the exact license terms to the
+  official license text.
+- Document only released behavior verified against the published packages.
 
 ## Local checks
 
