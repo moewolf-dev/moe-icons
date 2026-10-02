@@ -47,6 +47,7 @@ const latest = {
     code: asset(descriptor.free, "code"),
     icons: descriptor.free.assets ? asset(descriptor.free.assets, "icons") : undefined,
     metadata: asset(descriptor.free.metadata, "metadata"),
+    ...(descriptor.free.resources ? { resourceIndex: asset(descriptor.free.resources.index,"resource-index"), resourceBundle: asset(descriptor.free.resources.bundle,"resource-bundle") } : {}),
   },
 };
 for (const [key, value] of Object.entries(latest.assets)) {
