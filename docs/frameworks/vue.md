@@ -10,7 +10,7 @@ is a component definition; there is no plugin, provider or composable.
 | `moe-icons/vue` | Published and verified |
 | Style switching | Not supported by the published package |
 | Nuxt | Direct components usable; see [Nuxt](/frameworks/nuxt) |
-| CLI-generated proxies | Experimental, not consumable; see [CLI status](/cli#release-status) |
+| CLI-generated proxies | CLI 0.0.3 generated local components verified; see [CLI status](/cli#release-status) |
 
 ## Setup
 

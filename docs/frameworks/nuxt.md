@@ -1,4 +1,26 @@
 # Nuxt
+Two separate integrations are available. CLI-generated components are described first; the direct npm component package has its own support status below.
+
+## CLI-generated components (verified)
+
+`@moewolf/moe-icons-cli@0.0.3` with icon resources `0.0.18` passed production build, SSR, browser hydration and theme interaction checks for Free/Pro, single/multiple themes, and SVG/bitmap icons. See [CLI](/cli) for configuration and commands. This example selects `ui-search`, uses the `outline` theme and the default output directory `src/moeicons`.
+
+Import the local provider and icons explicitly, and keep the initial theme identical on the server and client. SSR verification does not rely on `ClientOnly`. There is no Nuxt module or auto-import integration.
+
+```vue
+<!-- components/IconPanel.vue -->
+<script setup lang="ts">
+import { MoeiconsProvider, UiSearch } from '../src/moeicons';
+</script>
+
+<template>
+  <MoeiconsProvider theme="outline"><UiSearch :size="24" aria-label="Search" /></MoeiconsProvider>
+</template>
+```
+
+This verification covers CLI-generated components. The direct npm component package keeps its separate status below. Custom Nuxt modules and other automatic integrations need separate verification.
+
+## Direct npm component package
 
 Nuxt support uses the published `moe-icons@0.0.17` Vue components directly.
 There is no Nuxt module, auto-import or provider, and SSR behavior is not

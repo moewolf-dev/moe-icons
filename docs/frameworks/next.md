@@ -1,4 +1,31 @@
 # Next.js
+Two separate integrations are available. CLI-generated components are described first; the direct npm component package has its own support status below.
+
+## CLI-generated components (verified)
+
+`@moewolf/moe-icons-cli@0.0.3` with icon resources `0.0.18` passed production build, SSR, browser hydration and theme interaction checks for Free/Pro, single/multiple themes, and SVG/bitmap icons. See [CLI](/cli) for configuration and commands. This example selects `ui-search`, uses the `outline` theme and the default output directory `src/moeicons`.
+
+Keep page/layout as Server Components and declare `use client` on the icon/provider subtree. The CLI does not choose an App Router client boundary automatically.
+
+```tsx
+// app/icon-panel.tsx
+'use client';
+import { MoeiconsProvider, UiSearch } from '../src/moeicons';
+
+export default function IconPanel() {
+  return <MoeiconsProvider theme="outline"><UiSearch size={24} aria-label="Search" /></MoeiconsProvider>;
+}
+```
+
+```tsx
+// app/page.tsx
+import IconPanel from './icon-panel';
+export default function Page() { return <main><IconPanel /></main>; }
+```
+
+This verification covers CLI-generated components. The direct npm component package keeps its separate status below. Pages Router, `next/image` and custom App Router integrations need separate verification.
+
+## Direct npm component package
 
 Next.js support uses the published `moe-icons@0.0.17` components directly.
 There is no provider or automatic integration, and Next-specific behavior is

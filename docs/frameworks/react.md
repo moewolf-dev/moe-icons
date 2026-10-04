@@ -10,7 +10,7 @@ icon is a plain function component; there is no provider, hook or context.
 | `moe-icons/react` | Published and verified |
 | Style switching | Not supported by the published package |
 | Next.js App Router | Direct components usable; see [Next.js](/frameworks/next) |
-| CLI-generated proxies | Experimental, not consumable; see [CLI status](/cli#release-status) |
+| CLI-generated proxies | CLI 0.0.3 generated local components verified; see [CLI status](/cli#release-status) |
 
 ## Setup
 
