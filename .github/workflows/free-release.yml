@@ -208,6 +208,7 @@ jobs:
             --pattern "moe-icons-free-resource-index-${VERSION}.json.gz*" \
             --pattern "moe-icons-free-resources-${VERSION}.bin*" \
             --pattern "release-descriptor.json" \
+            --pattern "release-latest.json" \
             --dir "$RUNNER_TEMP/existing"
           node scripts/compare-release.mjs "$RUNNER_TEMP/candidate" "$RUNNER_TEMP/existing" "$VERSION" "$DESCRIPTOR_SHA"
           echo "exists=true" >> "$GITHUB_OUTPUT"
