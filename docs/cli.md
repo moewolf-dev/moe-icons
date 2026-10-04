@@ -1,115 +1,109 @@
 # CLI commands
 
-The `moeicons` binary is published as `@moewolf/moe-icons-cli@0.0.1` and
-requires Node.js 22+. This page describes exactly what `0.0.1` implements, and
-its current release status.
+`@moewolf/moe-icons-cli@0.0.3` provides the `moeicons` command and requires
+Node.js 22 or later. The CLI installs verified icon resources and generates
+local components. These components are imported from your project, separately
+from the direct `moe-icons` npm package.
 
 ## Release status
 
-**The CLI workflow is not consumable with the published packages today.**
+This release uses icon resources `0.0.18`. Free installation needs no account;
+Pro installation requires login and an active entitlement.
 
-1. `moeicons install free` fetches the `v0.0.17` GitHub release. It first
-   requests `release-descriptor.json.sha256`, which that release does not
-   publish, so the download fails with `NOT_FOUND` (HTTP 404).
-2. When a release is available, generated React/Vue proxies import
-   `moe-icons/free/react/<group>`, `moe-icons/free/vue/<group>` and the Pro
-   equivalents. The published `moe-icons@0.0.17` package exports only `.`,
-   `./react` and `./vue`, so those imports cannot resolve.
-
-Until a compatible release and package are published, use the
-[`moe-icons` component package](/installation) or
-[downloaded assets](/website-search). The command reference below is provided so
-the surface is documented, not as a recommendation to use it in production.
-
-## Command overview
-
-```text
-moeicons                      interactive guided flow (free / pro / login)
-moeicons install [group]      install an icon group (free | pro)
-moeicons login                browser login (PKCE)
-moeicons logout               clear local session
-moeicons account              show account/tier info
-moeicons groups               list available icon groups
-moeicons generate             generate React/Vue proxy components
-moeicons init                 create moeicons.config.jsonc
-moeicons mcp                  start the MCP stdio server
-moeicons --version            show version
-moeicons --help               show help
-```
-
-`groups` is accepted but not implemented; it exits `1` with `NOT_IMPLEMENTED`.
-`doctor`, `recover` and `update` are **not** part of `0.0.1`.
-
-## Global options
-
-| Option | Effect |
+| Integration | Verified scope |
 | --- | --- |
-| `--json` | Machine-readable JSON output. |
-| `--yes` | Accept confirmations in non-interactive mode. |
-| `--target <t>` | Output target: `react`, `vue`, `vanilla`, `assets`. |
-| `--no-tailwind` | Skip Tailwind config auto-integration. |
-| `--pro` / `--ent` | Legacy aliases that map to `install`. |
-| `--help` / `-h`, `--version` / `-v` | Help or version. |
+| Vite React / Vue | Generated components, production build and browser rendering |
+| Next App Router / Nuxt SSR | Generated components, single/multiple themes, server rendering and browser hydration |
+| Windows x64 | Node 22/24, npm/pnpm, Free React/Vue core commands, production build and interrupted-write recovery |
 
-Without arguments the CLI starts the interactive wizard; a non-TTY stream
-refuses (`NOT_TTY`) and writes nothing.
+Windows Pro flows and interactive terminal/PTY behavior, Next Pages Router and custom Nuxt
+modules are outside this verification. Direct `moe-icons@0.0.17` component
+examples retain their own support status; see [Next.js](/frameworks/next) and
+[Nuxt](/frameworks/nuxt).
 
-## install
+## First installation
 
-```sh
-moeicons install free
-moeicons install pro
-moeicons install free --target vue
-```
-
-Requires a detected project and a readable config. `free` needs no account;
-`pro` needs an active entitlement. A single style-group name is rejected. It
-downloads the release for the tier and target. See
-[release status](#release-status) for the current blocker.
-
-## init
+Run these commands in an existing React or Vue project:
 
 ```sh
-moeicons init
+npm install -D @moewolf/moe-icons-cli@0.0.3
+npx moeicons init
 ```
 
-Writes `moeicons.config.jsonc` (schema version 2) and does not modify your
-application entry. JSON mode returns `{ "ok": true, "created": "<path>" }`.
+For Vue, use `npx moeicons init --target vue`. Review the generated
+`moeicons.config.jsonc`; it uses schema version 3. Choose your icon IDs and
+themes before installing. A minimal React selection is:
 
-## generate
+```json
+{
+  "schemaVersion": 3,
+  "tier": "free",
+  "target": "react",
+  "outputDir": "src/moeicons",
+  "downloadMode": "icons",
+  "icons": ["ui-search"],
+  "defaultTheme": "outline",
+  "themes": {
+    "outline": { "styleGroup": "moe-outline" },
+    "solid": { "styleGroup": "moe-solid" }
+  },
+  "missingIconPolicy": "fallback"
+}
+```
 
 ```sh
-moeicons generate
-moeicons generate --target assets
-moeicons generate --no-tailwind
+npx moeicons install free
+npx moeicons generate
+npx moeicons init --yes
+npx moeicons doctor --check
 ```
 
-Reads the installed artifact and writes files to `outputDir`. Requires a
-completed `install`. Tailwind 4 exits with `TAILWIND_VERSION_UNSUPPORTED`.
-Generated React/Vue code imports unpublished `moe-icons/<tier>/...` subpaths
-(see [release status](#release-status)).
+The final `init` reconciles project integration after generation. Review entry
+changes and any dependency instructions before building. Import generated
+components and the provider from your configured output directory. Adding
+icons or changing themes, format or image size requires another `install` or
+`update` before `generate`.
 
-## login / logout / account
+## Download modes
 
-- `login` opens the browser and stores a session in the OS keychain (or an
-  explicit `0600` file fallback). Tokens are never printed.
-- `account` prints the local account and, when online, the tier/entitlement.
-- `logout` revokes the session remotely when possible and clears local state.
-
-## mcp
-
-Starts an MCP stdio JSON-RPC server. `install_icon_group` fails closed in this
-release; treat MCP as discovery-only.
-
-## Exit codes
-
-| Code | Meaning |
+| `downloadMode` | Behavior |
 | --- | --- |
-| `0` | Success, help, version, or cancellation |
-| `1` | Validation error, `NOT_TTY`, not implemented, unsupported Tailwind |
-| `2` | Authentication (`AUTH_ERROR`) or forbidden (`FORBIDDEN`) |
-| `3` | Network error |
-| `4` | Not found |
-| `5` | Unexpected error |
+| `auto` | Selected resources when advertised; a legacy release without that capability uses its full archive. |
+| `icons` | Selected resources required; unsupported releases or invalid/missing resources fail. |
+| `full` | Download and verify the complete archive. |
 
-JSON failures are `{ "ok": false, "code": "...", "message": "..." }`.
+Authorization failures, invalid ranges, digest mismatches and download errors
+never trigger an automatic full download after selected resources have been
+advertised. Warm caches reduce resource traffic; Pro installation still checks
+current entitlement. Generation works offline from verified installed files.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `install free` / `install pro` | Install resources for the configured tier and target. |
+| `generate` | Generate local components from the installed selection. |
+| `init` / `init --dry-run` | Create config and reconcile project integration, or review a plan. |
+| `doctor --check` | Diagnose project anchors without writes; fail if required anchors are unhealthy. |
+| `recover` | Restore an interrupted transaction before retrying the original command. |
+| `update` | Update installed resources and reconcile the current selection. |
+| `update metadata` | Update metadata for the installed code version. |
+| `login` / `logout` / `account` | Manage login and inspect the account. |
+| `mcp` | Start the project MCP stdio server. |
+| `--version` / `--help` | Show version or command help. |
+
+`groups` remains unimplemented. Without arguments the command opens its
+interactive flow; a non-TTY invocation refuses instead of silently writing.
+Use `--json` for structured results and `--yes` for explicit non-interactive
+confirmation. A target override must agree with your config.
+
+## Pro and recovery
+
+Run `moeicons login`, select `tier: "pro"` in your config, then install Pro.
+Never commit credentials or place them in browser source or MCP configuration.
+Consult the official license for redistribution terms.
+
+After a process interruption, run `moeicons recover` at the project root.
+Recovery preserves conflicting user edits and retains backups for review; do
+not delete journals or backups to bypass a conflict. This covers interrupted
+processes, not power loss or a hostile filesystem.

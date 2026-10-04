@@ -10,7 +10,7 @@ Provider、hook 或 context。
 | `moe-icons/react` | 已发布并验证 |
 | 样式切换 | 已发布包不支持 |
 | Next.js App Router | 直接组件可用；见 [Next.js](/cn/frameworks/next) |
-| CLI 生成代理 | 实验性，不可用；见 [CLI 状态](/cn/cli#发布状态) |
+| CLI 生成代理 | CLI 0.0.3 本地生成组件已验证；见 [CLI 状态](/cn/cli#发布状态) |
 
 ## 安装
 

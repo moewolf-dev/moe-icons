@@ -1,4 +1,26 @@
 # Nuxt
+支持两种独立接入方式。下方先说明 CLI 生成组件；直接 npm 组件包的范围单独列出。
+
+## CLI 生成组件（已验证）
+
+使用 `@moewolf/moe-icons-cli@0.0.3` 与 `0.0.18` 图标资源，完成生产构建、SSR、浏览器水合和主题交互验证；覆盖 Free/Pro、单/多主题与 SVG/位图。配置和命令见 [CLI](/cn/cli)。下面使用 `ui-search` 图标、`outline` 主题及默认输出目录 `src/moeicons`。
+
+在组件中明确导入本地 Provider 与图标，保持服务端和客户端初始主题一致。SSR 验证不依赖 `ClientOnly`；不提供 Nuxt module 或自动导入。
+
+```vue
+<!-- components/IconPanel.vue -->
+<script setup lang="ts">
+import { MoeiconsProvider, UiSearch } from '../src/moeicons';
+</script>
+
+<template>
+  <MoeiconsProvider theme="outline"><UiSearch :size="24" aria-label="Search" /></MoeiconsProvider>
+</template>
+```
+
+上述认证适用于 CLI 生成组件，不改变下面直接 npm 组件包的支持状态。自定义 Nuxt module 和其他自动集成仍需自行验证。
+
+## 直接 npm 组件包
 
 Nuxt 支持直接使用已发布的 `moe-icons@0.0.17` Vue 组件。没有 Nuxt 模块、自动导入
 或 Provider，SSR 行为未认证。
