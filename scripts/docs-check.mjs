@@ -240,8 +240,15 @@ for (const locale of registry?.locales ?? []) {
     if (typeof data.description !== 'string' || data.description.trim() === '') {
       errors.push(`${display}: developer log description is required`)
     }
-    const frontmatterDate =
-      data.date instanceof Date ? data.date.toISOString().slice(0, 10) : String(data.date ?? '')
+    const rawDate = data.date
+    let frontmatterDate
+    if (rawDate instanceof Date) {
+      frontmatterDate = rawDate.toISOString().slice(0, 10)
+    } else if (typeof rawDate === 'string' && rawDate.trim() !== '' && !Number.isNaN(new Date(rawDate).getTime())) {
+      frontmatterDate = new Date(rawDate).toISOString().slice(0, 10)
+    } else {
+      frontmatterDate = String(rawDate ?? '')
+    }
     if (!DATE_ONLY.test(frontmatterDate) || frontmatterDate !== date) {
       errors.push(`${display}: frontmatter date must match the filename (${date})`)
     }
