@@ -89,14 +89,15 @@ preview and do not rely on it as an install path yet.
 | `moe-lite-outline` | Free | SVG |
 | `moe-solid` | Free | SVG |
 | `moe-colored` | Free | SVG |
-| `moe-3d-metal` | Pro | SVG + PNG/WebP (128/256/512) |
+| `moe-3d-metal` | Pro | PNG/WebP bitmaps (128/256/512) |
 | `moe-duotone` | Pro | SVG |
 | `moe-pixel-lite-outline` | Pro | SVG |
 | `moe-pixel-outline` | Pro | SVG |
 | `moe-pixel-solid` | Pro | SVG |
 | `moe-sticker` | Pro | SVG |
 
-All vector icons are SVG and use `currentColor` where applicable.
+All vector style groups are SVG and use `currentColor` where applicable. The Pro
+`moe-3d-metal` group is delivered as PNG and WebP bitmaps only, with no SVG.
 
 ## Free vs Pro
 
@@ -104,7 +105,7 @@ All vector icons are SVG and use `currentColor` where applicable.
 | --- | --- | --- |
 | Style groups | 4 | 10 (adds the 6 Pro groups) |
 | Icons | 554 per group | 554 per group |
-| Formats | SVG | SVG plus PNG/WebP for `moe-3d-metal` |
+| Formats | SVG | SVG; `moe-3d-metal` is PNG/WebP bitmaps (128/256/512) |
 | Account | Not required | Required, active entitlement |
 | Price | Free | One-time payment (see the pricing page) |
 | Usage | In your own products, per the license | In your own products, per the license |

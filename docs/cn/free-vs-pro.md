@@ -9,7 +9,7 @@ Moe Icons 提供无需账号的免费层级，以及解锁其余样式组的 Pro
 | --- | --- | --- |
 | 样式组 | `moe-outline`、`moe-lite-outline`、`moe-solid`、`moe-colored` | 全部样式组：额外包含 `moe-3d-metal`、`moe-duotone`、`moe-pixel-lite-outline`、`moe-pixel-outline`、`moe-pixel-solid`、`moe-sticker` |
 | 图标数量 | 每组 554 个 | 每组 554 个 |
-| 格式 | SVG | SVG 加位图 PNG/WebP（3D 金属，128/256/512） |
+| 格式 | SVG | SVG；`moe-3d-metal` 为 PNG/WebP 位图（128/256/512） |
 | 当前可用渠道 | npm 组件包（Moe Outline）、官网下载与 CLI | 有效 Pro 账号的官网下载与 CLI |
 | 官网搜索 | 浏览、复制并下载免费组 | 浏览、复制并下载全部组 |
 | 更新 | 免费线 | 以购买时展示的许可为准 |

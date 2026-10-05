@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Moe Icons"
   text: "Developer documentation"
-  tagline: 554 semantic SVG icons, four Free style groups, React/Vue/Vanilla generation.
+  tagline: 554 semantic icons per style group, four Free SVG groups, React/Vue/Vanilla generation.
   actions:
     - theme: brand
       text: Get started

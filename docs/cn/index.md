@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Moe Icons"
   text: "开发者文档"
-  tagline: 554 个语义化 SVG 图标，已发布的 React/Vue 组件包，以及官网搜索与下载。
+  tagline: 每个样式组 554 个语义化图标，四个免费 SVG 样式组，已发布的 React/Vue 组件包，以及官网搜索与下载。
   actions:
     - theme: brand
       text: 快速开始

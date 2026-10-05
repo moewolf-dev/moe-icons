@@ -12,7 +12,8 @@ the released packages and the live website, not against the working tree.
 
 ## Available now
 
-- **554 semantic SVG icons per style group.** The same icon ID (for example
+- **554 semantic icons per style group.** Vector groups are SVG; the Pro
+  `moe-3d-metal` group is PNG/WebP bitmaps. The same icon ID (for example
   `ui-search`) exists across style groups, so a project can switch styles
   without renaming imports.
 - **Four Free style groups:** `moe-outline`, `moe-lite-outline`, `moe-solid`

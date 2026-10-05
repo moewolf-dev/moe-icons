@@ -10,7 +10,7 @@ tier.
 | --- | --- | --- |
 | Style groups | `moe-outline`, `moe-lite-outline`, `moe-solid`, `moe-colored` | All groups: adds `moe-3d-metal`, `moe-duotone`, `moe-pixel-lite-outline`, `moe-pixel-outline`, `moe-pixel-solid`, `moe-sticker` |
 | Icon count | 554 per group | 554 per group |
-| Formats | SVG | SVG plus bitmap PNG/WebP (3D metal, 128/256/512) |
+| Formats | SVG | SVG; `moe-3d-metal` is PNG/WebP bitmaps (128/256/512) |
 | Available now via | npm component package (Moe Outline), website downloads, and the CLI | Website downloads and the CLI for an active Pro account |
 | Website search | Browse, copy and download Free groups | Browse, copy and download every group |
 | Updates | Free line | Per the license shown at purchase |

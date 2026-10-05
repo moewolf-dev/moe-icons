@@ -11,8 +11,9 @@ description: Moe Icons 现已提供每组 554 个语义化 SVG 图标、四个�
 
 ## 当前可用
 
-- **每个样式组 554 个语义化 SVG 图标。** 同一个图标 ID（例如 `ui-search`）
-  存在于多个样式组中，项目切换样式时无需改导入名。
+- **每个样式组 554 个语义化图标。** 向量组为 SVG；Pro 的 `moe-3d-metal`
+  组为 PNG/WebP 位图。同一个图标 ID（例如 `ui-search`）存在于多个样式组中，
+  项目切换样式时无需改导入名。
 - **四个免费样式组：** `moe-outline`、`moe-lite-outline`、`moe-solid` 与
   `moe-colored`。免费使用无需账号或登录。
 - **已发布的组件包 `moe-icons@0.0.17`**，支持 React、Vue 以及 Vanilla DOM
