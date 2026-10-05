@@ -15,10 +15,15 @@ mirrored to the private website repository and published to
   not create a second `docs/zh-cn/` tree).
 - `docs/frameworks/` and `docs/cn/frameworks/` — per-framework pages. These are
   content subdirectories, not locales.
+- `docs/developer-log/` and `docs/cn/developer-log/` — developer log entries.
+  Each entry is one Markdown file named `YYYY-MM-DD-short-title.md` with
+  `title`, `date` and `description` frontmatter. The website adapter scans this
+  directory at build time and appends a collapsed sidebar group, so a new valid
+  file needs no registry or website edit.
 - `docs/locales.json` — the declarative locale registry. It carries each
-  locale's `nav` and `sidebar`, which the private website VitePress config
-  reads and renders. Add a language by adding its directory and one registry
-  entry.
+  locale's `nav`, `sidebar` and `developerLog` configuration, which the private
+  website VitePress config reads and renders. Add a language by adding its
+  directory and one registry entry.
 - Other language directories follow the same convention (lowercase,
   hyphenated slugs; canonical BCP-47 `lang`).
 
@@ -37,6 +42,7 @@ mirrored to the private website repository and published to
 | `website-search.md` | Website search flow (C08) |
 | `free-vs-pro.md` | Free/Pro comparison (C09) |
 | `faq.md` | Q&A and troubleshooting (C10) |
+| `developer-log/*.md` | Developer log entries, one file per update |
 | `markdown-examples.md`, `api-examples.md` | Redirect stubs for old links |
 
 ## Rules for contributors
@@ -54,14 +60,17 @@ mirrored to the private website repository and published to
   is declared in `docs/locales.json`, not in the website config.
 - Document released capabilities only, verified against the npm archives, not
   the working tree. The verified path is `moe-icons@0.0.17`
-  (`moe-icons/react`, `moe-icons/vue`) plus website asset downloads. The CLI
-  `@moewolf/moe-icons-cli@0.0.1` is **experimental**: `install free` currently
-  404s (missing `release-descriptor.json.sha256`) and it generated proxies that
-  import unpublished `moe-icons/free|pro/...` subpaths — keep that limitation
-  stated. Next.js and Nuxt are manual/uncertified; Windows is not certified.
+  (`moe-icons/react`, `moe-icons/vue`) plus website asset downloads and the
+  published CLI `@moewolf/moe-icons-cli@0.0.3` (icon resources `0.0.18`). The
+  CLI Free install needs no account; Pro install signs in and checks the
+  entitlement. Next.js and Nuxt are manual/uncertified; Windows is not
+  certified for interactive Pro flows.
 - Do not reintroduce removed claims such as a `size` prop, Provider
   `defaultTheme`/`onThemeChange`, `downloadMode`, theme-level `icons`, or a
   Vanilla `runtime.ts`.
+- Developer log entries: use the `YYYY-MM-DD-short-title.md` filename, keep the
+  frontmatter `date` equal to the filename date, and use the same slug in every
+  language so the mirrored links line up.
 
 ## Public content rules (do not publish)
 
@@ -112,6 +121,17 @@ The website sync PR is a required step before a docs change is live. Never edit
 and let sync update it. Roll back a published page by reverting the public
 source and re-running the pipeline, not by hand-editing the mirror.
 
+### Developer log publishing
+
+A change that only adds files under `docs/developer-log/` and
+`docs/cn/developer-log/` follows a narrower, faster path: the website sync PR is
+detected as log-only and eligible for auto-merge once the required checks pass,
+so a maintainer can publish a new entry by merging its file in this repository.
+Any change that also touches other docs stays on the normal manual-review path.
+The website sidebar entry is generated from the directory contents, so do not
+edit `docs/locales.json` for a new entry — only the first-time `developerLog`
+category declaration lives there.
+
 ## Navigation and locales
 
 Language content and the `docs/locales.json` registry are synchronized to the
@@ -122,7 +142,9 @@ becomes available once the sync PR is reviewed, merged, and the docs build
 passes.
 
 When you add a page, add it to the `sidebar` (and `nav` if top-level) of every
-locale in `docs/locales.json` so no language is missing an entry.
+locale in `docs/locales.json` so no language is missing an entry. The developer
+log is the exception: its sidebar group is discovered from the filesystem, so
+only add the file.
 
 ## Maintenance triggers
 
@@ -137,13 +159,15 @@ changes:
 - **Price or license wording** → `free-vs-pro.md` only if it still matches the
   pricing page; otherwise link to the page and update the verification date.
 - **Website search flow** → `website-search.md` and its translation.
+- **A released CLI/plugin/website change** → the matching page and the next
+  developer log entry.
 
 ## Remaining limitations (do not overstate)
 
 - Next.js and Nuxt are manual integrations, not certified.
-- Windows is not certified for the first CLI release candidate.
+- Windows is not certified for interactive Pro CLI flows.
 - The published `moe-icons` package exposes `moe-icons/react` and
   `moe-icons/vue` only; the `free`/`pro`/`assets` style-group subpaths are not
-  published.
+  published. The CLI generates local components instead.
 - Bitmap style groups are unavailable for the `vanilla` target.
 - The website search page has no dedicated "copy ID" control.

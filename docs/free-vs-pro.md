@@ -11,7 +11,7 @@ tier.
 | Style groups | `moe-outline`, `moe-lite-outline`, `moe-solid`, `moe-colored` | All groups: adds `moe-3d-metal`, `moe-duotone`, `moe-pixel-lite-outline`, `moe-pixel-outline`, `moe-pixel-solid`, `moe-sticker` |
 | Icon count | 554 per group | 554 per group |
 | Formats | SVG | SVG plus bitmap PNG/WebP (3D metal, 128/256/512) |
-| Available now via | npm component package (Moe Outline) and website downloads | Website downloads for an active Pro account |
+| Available now via | npm component package (Moe Outline), website downloads, and the CLI | Website downloads and the CLI for an active Pro account |
 | Website search | Browse, copy and download Free groups | Browse, copy and download every group |
 | Updates | Free line | Per the license shown at purchase |
 | Price | Free | One-time payment |
@@ -22,9 +22,10 @@ for the current price and product description. The license shown at checkout
 time of writing (2026-10-01) the Pro plan is a one-time purchase shown as
 **$39 USD**. Confirm the live price on the pricing page.
 
-The CLI (`moeicons install free` / `install pro`) is **experimental and not
-consumable yet**; do not use it as your integration path. See
-[CLI release status](/cli#release-status).
+The CLI (`@moewolf/moe-icons-cli@0.0.3`, icon resources `0.0.18`) installs Free
+and Pro resources and generates local components for React, Vue and Vanilla.
+Free installation needs no account; Pro installation signs in and checks your
+entitlement. See [CLI release status](/cli#release-status).
 
 ## Free access
 

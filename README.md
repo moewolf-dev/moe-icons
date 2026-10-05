@@ -1,43 +1,125 @@
+<div align="center">
+
 # Moe Icons
 
-Moeicons is a standard SVG static and dynamic icon library that can be used in various scenarios.
+**554 semantic SVG icons for React, Vue and Vanilla — one icon ID, many styles.**
 
-It includes several features:
+[Website](https://moeicons.com) · [Documentation](https://moeicons.com/docs/) · [Icon search](https://moeicons.com/search) · [CLI on npm](https://www.npmjs.com/package/@moewolf/moe-icons-cli)
 
-- Static icons and dynamic icons are associated with standardized naming and usage, making it easy to get started.
-- Precise control of various states of dynamic icons through JS, applied to various interactive states.
-- All files are native SVG, controlled directly through JS without using any third-party dynamic JS libraries, keeping it clean and compatible.
-- A standard version and a personalized style icon library coexist, allowing for convenient and quick customization of themes.
-- A wide variety covering popular programming language UI frameworks.
-- Template-based; whether for React or Vue, it can be directly added to projects for easy invocation.
-- Specifically designed for the tech community and research field, covering the technology sector comprehensively.
+</div>
 
-## Repository structure
+Moe Icons is an icon library built around a simple idea: one semantic icon ID
+(for example `ui-search`) exists in every style group, so you can switch from
+outline to solid to coloured without renaming a single import.
 
-Official source icons are stored under `icons/<style>/`, one directory per style group:
+- **554 icons per style group**, drawn on the same 24×24 grid.
+- **Four Free style groups** — no account required.
+- **Published React, Vue and Vanilla components** plus downloadable SVG assets.
+- **A published CLI** that installs the icons you pick and generates local
+  components for your framework.
 
-- `icons/moe-outline/` — the standard outline Free style group.
-- `icons/moe-lite-outline/` — the lite outline Free style group.
-- `icons/moe-solid/` — the solid Free style group.
-- `icons/moe-colored/` — the colored Free style group.
+## Preview
 
-The Free set is fixed by `contracts/release-policy/free-style-groups.v1.json`
-(RELEASE-BITMAP-0909 D-01). The legacy `Moe`, `MoeAnimate` and `MoeLite`
-directories were removed; see `scripts/migrate-public-icons.mjs` for the exact
-mapping.
+Browse, preview and copy any icon in every Free style group on the
+[icon search page](https://moeicons.com/search). Each icon shows its style
+variants and a ready-to-copy snippet.
 
-Public documentation lives in [`docs/`](./docs/README.md).
+## Quick start (Free component package)
 
-## Documentation
+```sh
+npm install moe-icons
+```
 
-**Free docs changes must be submitted here**, in the [`docs/`](./docs/README.md)
-directory. This repository is the single source of truth for public (Free)
-documentation; it is mirrored to the private website repository and published
-to <https://moeicons.com/docs/> after human review.
+React:
 
-- Default language: English (in `docs/`).
-- Chinese translation: `docs/cn/`.
-- The `docs/pro/` directory must never exist in this public repository.
+```tsx
+import { ArrowBoldRight } from 'moe-icons/react';
+
+export function NextButton() {
+  return <ArrowBoldRight width={32} height={32} aria-label="Next" />;
+}
+```
+
+Vue:
+
+```vue
+<script setup lang="ts">
+import { ArrowBoldRight } from 'moe-icons/vue';
+</script>
+
+<template>
+  <ArrowBoldRight width="32" height="32" aria-label="Next" />
+</template>
+```
+
+The published `moe-icons@0.0.17` package ships the **Moe Outline** set. For the
+other Free groups, download the SVG from the website or use the CLI. See
+[Quick start](https://moeicons.com/docs/getting-started) for props, sizing and
+accessibility.
+
+## CLI
+
+`@moewolf/moe-icons-cli` installs verified icon resources and generates typed
+local components for React, Vue or Vanilla. It requires Node.js 22 or later.
+
+```sh
+npm install -D @moewolf/moe-icons-cli
+npx moeicons init
+npx moeicons install free
+npx moeicons generate
+```
+
+`init` writes a `moeicons.config.jsonc` (schema version 3) where you choose the
+target, style groups and icon IDs. Free installation needs no account; Pro
+installation signs in and checks the account entitlement. Generated projects are
+verified for Vite React/Vue and Next.js App Router / Nuxt SSR. See the
+[CLI reference](https://moeicons.com/docs/cli).
+
+## Editor plugin
+
+A VS Code extension for completion and diagnostics of CLI-generated exports is
+**in development and not yet published** to the marketplace. Treat it as a
+preview and do not rely on it as an install path yet.
+
+## Styles and formats
+
+| Style group | Tier | Format |
+| --- | --- | --- |
+| `moe-outline` | Free | SVG |
+| `moe-lite-outline` | Free | SVG |
+| `moe-solid` | Free | SVG |
+| `moe-colored` | Free | SVG |
+| `moe-3d-metal` | Pro | SVG + PNG/WebP (128/256/512) |
+| `moe-duotone` | Pro | SVG |
+| `moe-pixel-lite-outline` | Pro | SVG |
+| `moe-pixel-outline` | Pro | SVG |
+| `moe-pixel-solid` | Pro | SVG |
+| `moe-sticker` | Pro | SVG |
+
+All vector icons are SVG and use `currentColor` where applicable.
+
+## Free vs Pro
+
+| | Free | Pro |
+| --- | --- | --- |
+| Style groups | 4 | 10 (adds the 6 Pro groups) |
+| Icons | 554 per group | 554 per group |
+| Formats | SVG | SVG plus PNG/WebP for `moe-3d-metal` |
+| Account | Not required | Required, active entitlement |
+| Price | Free | One-time payment (see the pricing page) |
+| Usage | In your own products, per the license | In your own products, per the license |
+
+The [pricing page](https://moeicons.com/pricing) is the source of truth for the
+current price, and the license shown at checkout is the source of truth for usage
+rights. See [Free vs Pro](https://moeicons.com/docs/free-vs-pro).
+
+## Documentation and contributing
+
+- Documentation: <https://moeicons.com/docs/>
+- Public docs source: [`docs/`](./docs/README.md) in this repository. This is the
+  single source for the Free documentation; it is mirrored to the website after
+  review.
+- Developer log: [`docs/developer-log/`](./docs/developer-log)
 
 Local checks before opening a pull request:
 
@@ -47,23 +129,16 @@ npm run docs:check
 npm run docs:build
 ```
 
-See [`docs/README.md`](./docs/README.md) for the full contribution rules.
+## Repository structure
 
-### Documentation sync
+- `icons/<style>/` — the public Free SVG sources, one directory per style group.
+- `docs/` — the public Free documentation (English and Chinese).
+- `contracts/` — the Free style-group and website projection contracts.
+- `scripts/` — documentation, release and sync tooling.
 
-Changes merged to `main` under `docs/**` are automatically mirrored to the
-private website repository via the `Sync public docs to private website`
-workflow. The sync:
+## License
 
-- pushes to the private `docs-sync/public-main` branch (never `main`);
-- is driven by the `PRIVATE_WEBSITE_DEPLOY_KEY` Actions secret (Deploy Key);
-- triggers a review PR titled `docs: sync public documentation` on the private
-  repository;
-- can be re-run manually from the Actions tab via `workflow_dispatch`.
-
-The sync script can be verified locally without touching any remote:
-
-```bash
-bash scripts/test-sync-docs.sh   # unit tests in a temp directory
-bash scripts/test-sync-e2e.sh    # end-to-end sandbox using the real skeletons
-```
+Free style groups and the documentation are available without an account; the Pro
+groups are a one-time purchase. The exact usage terms are in the license shown at
+checkout and the [Terms of Service](https://moeicons.com/terms), which are the
+authoritative texts.

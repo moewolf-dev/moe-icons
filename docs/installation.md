@@ -1,13 +1,12 @@
 # Installation
 
-There are two supported ways to consume Moe Icons today. A third (the CLI) is
-experimental and not yet consumable with the published packages.
+There are three supported ways to consume Moe Icons today.
 
 | Approach | Package | Styles | Status |
 | --- | --- | --- | --- |
 | Component package | `moe-icons` | One (Moe Outline) | Published and verified |
 | Raw assets | website downloads | All Free groups | Published |
-| CLI project proxies | `@moewolf/moe-icons-cli` | Multiple | Experimental — see below |
+| CLI project proxies | `@moewolf/moe-icons-cli` | Multiple | Published and verified — see below |
 
 ## Install the component package
 
@@ -54,36 +53,29 @@ groups). Free groups are available without an account. Use the SVG directly:
 
 The SVGs use `currentColor`, so inlining them lets them follow the text colour.
 
-## CLI (experimental)
+## CLI
 
-The CLI package is published as `@moewolf/moe-icons-cli@0.0.1` and requires
-Node.js 22+:
+The CLI is published as `@moewolf/moe-icons-cli@0.0.3` and requires Node.js 22+:
 
 ```sh
 npm install -D @moewolf/moe-icons-cli
-npx moeicons --version   # 0.0.1
+npx moeicons init
+npx moeicons install free
+npx moeicons generate
 ```
 
-**Do not treat the CLI workflow as working yet.** In the `0.0.1` release:
-
-1. `moeicons install free` requests a `release-descriptor.json.sha256` asset
-   that the current `v0.0.17` GitHub release does not publish, so the download
-   fails with a 404.
-2. Even if a release were downloaded, generated React/Vue proxies import
-   `moe-icons/free/...` and `moe-icons/pro/...`, which the published
-   `moe-icons@0.0.17` package does not export.
-
-Until a compatible release is published, use the component package or raw
-assets. See [CLI commands](/cli) for the exact `0.0.1` surface and
-[CLI status](/cli#release-status) for the blockers.
+`init` writes a `moeicons.config.jsonc` (schema version 3). The Free install
+needs no account; the Pro install signs in and checks the account entitlement.
+Generated components are verified for Vite React/Vue and Next.js App Router /
+Nuxt SSR. See [CLI commands](/cli) for the full command surface and
+[CLI status](/cli#release-status) for the verification scope.
 
 ## Pro
 
-Pro resources require an account with an active entitlement. Pro is not
-available through the published component package. On the website you can
-browse Pro groups only after purchase; see [Free vs Pro](/free-vs-pro).
-`moeicons login` exists in the CLI but the Pro install path shares the same
-release blockers as Free above.
+Pro resources require an account with an active entitlement. The published
+component package does not include Pro, but the CLI can install Pro resources
+after `moeicons login`. On the website you can browse Pro groups only after
+purchase; see [Free vs Pro](/free-vs-pro).
 
 ## Updating
 
@@ -98,5 +90,5 @@ release blockers as Free above.
 | `moe-icons/react` not found | Confirm `moe-icons@0.0.17`; only `.`, `./react`, `./vue` are published. |
 | Icon renders huge / 300×150 | Pass `width`/`height` (React has no default size). |
 | Vue icon ignores `width` | Tailwind's `w-6 h-6` marker class may win; remove/override it or use CSS. |
-| `moeicons install` returns 404 | Known `0.0.1` release blocker; use the component package or assets. |
+| `moeicons install` fails | Confirm `@moewolf/moe-icons-cli@0.0.3` and Node 22+, then run `moeicons doctor --check`. |
 | Duplicate React/Vue versions | `moe-icons` pulls React/Vue as dependencies; dedupe or align versions. |

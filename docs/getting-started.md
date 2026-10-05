@@ -69,7 +69,7 @@ import { ArrowBoldRight } from 'moe-icons/vue';
 - Has no automatic accessible-name logic: pass `aria-label` or `title` and a
   `role` yourself for meaningful icons.
 - Does not include the other Free style groups. Download those from the
-  [icon search page](/website-search) or see the experimental [CLI](/cli).
+  [icon search page](/website-search) or install them with the [CLI](/cli).
 
 ## Other routes
 

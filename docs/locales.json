@@ -50,7 +50,12 @@
           "text": "Help",
           "items": [{ "text": "FAQ & troubleshooting", "link": "/faq" }]
         }
-      ]
+      ],
+      "developerLog": {
+        "text": "Developer log",
+        "dir": "developer-log",
+        "collapsed": true
+      }
     },
     {
       "slug": "cn",
@@ -101,7 +106,12 @@
           "text": "帮助",
           "items": [{ "text": "Q&A 与故障排查", "link": "/cn/faq" }]
         }
-      ]
+      ],
+      "developerLog": {
+        "text": "开发者日志",
+        "dir": "developer-log",
+        "collapsed": true
+      }
     }
   ]
 }

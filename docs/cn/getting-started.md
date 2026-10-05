@@ -61,8 +61,8 @@ import { ArrowBoldRight } from 'moe-icons/vue';
 
 - 只提供**一种样式集**（Moe Outline），已发布包内没有主题/Provider 切换。
 - 不会自动处理无障碍名称：有语义的图标请自行传 `aria-label` 或 `title` 与 `role`。
-- 不含其他免费样式组。请在[图标搜索页](/cn/website-search)下载，或参考实验性的
-  [CLI](/cn/cli)。
+- 不含其他免费样式组。请在[图标搜索页](/cn/website-search)下载，或使用
+  [CLI](/cn/cli) 安装。
 
 ## 其他入口
 

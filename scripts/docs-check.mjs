@@ -134,11 +134,12 @@ for (const f of mdFiles) {
 
 // 4. Locale registry (DEV-E02/DEC-46): declarative, canonical and bidirectional.
 const LOCALES = join(DOCS, 'locales.json')
+let registry = null
 if (!existsSync(LOCALES)) {
   errors.push('docs/locales.json is required')
 } else {
   try {
-    const registry = JSON.parse(readFileSync(LOCALES, 'utf8'))
+    registry = JSON.parse(readFileSync(LOCALES, 'utf8'))
     if (registry.schemaVersion !== 1) errors.push('docs/locales.json schemaVersion must be 1')
     if (!Array.isArray(registry.locales) || registry.locales.length === 0) {
       errors.push('docs/locales.json must declare a non-empty locales array')
@@ -167,6 +168,83 @@ if (!existsSync(LOCALES)) {
     if (hasCn && existsSync(join(DOCS, 'zh-cn'))) errors.push('docs/zh-cn must not exist; cn is the single zh-CN tree')
   } catch (e) {
     errors.push(`docs/locales.json parse error: ${e.message}`)
+  }
+}
+
+// 5. Content-directory whitelist. Every top-level directory under docs/ must be
+// a declared locale tree (with index.md) or a known content directory. A new
+// content directory must be declared here (or via a declared developer log
+// directory) instead of relaxing the locale checks.
+const CONTENT_DIRS = new Set(['frameworks'])
+for (const locale of registry?.locales ?? []) {
+  const dir = locale.developerLog?.dir
+  if (typeof dir === 'string' && dir) CONTENT_DIRS.add(dir)
+}
+const localeSlugs = new Set(
+  (registry?.locales ?? []).map((locale) => locale.slug).filter((slug) => slug !== 'root'),
+)
+for (const entry of readdirSync(DOCS, { withFileTypes: true })) {
+  if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+  if (localeSlugs.has(entry.name) || CONTENT_DIRS.has(entry.name)) continue
+  errors.push(`docs/${entry.name} is not a declared locale or known content directory`)
+}
+
+// 6. Developer log (declared by each locale's `developerLog` block). One log per
+// Markdown file, named `YYYY-MM-DD-short-title.md`, with title/date/description
+// frontmatter; the date must match the filename and slugs must be unique within
+// a locale. The website adapter scans the same directory to build the sidebar,
+// so a valid new file needs no registry edit.
+const LOG_NAME = /^(\d{4})-(\d{2})-(\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+for (const locale of registry?.locales ?? []) {
+  const config = locale.developerLog
+  if (!config) continue
+  const slug = String(locale.slug ?? '')
+  const dir = String(config.dir ?? '')
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(dir)) {
+    errors.push(`docs/locales.json ${slug}.developerLog.dir is invalid: ${dir}`)
+    continue
+  }
+  if (typeof config.text !== 'string' || config.text.trim() === '') {
+    errors.push(`docs/locales.json ${slug}.developerLog.text is required`)
+  }
+  const localeRoot = slug === 'root' ? DOCS : join(DOCS, slug)
+  const logDir = join(localeRoot, dir)
+  if (!existsSync(logDir)) {
+    errors.push(`developer log directory missing: docs/${rel(logDir)}`)
+    continue
+  }
+  const seenLogs = new Set()
+  for (const entry of readdirSync(logDir, { withFileTypes: true })) {
+    if (!entry.name.endsWith('.md')) continue
+    const display = `docs/${rel(join(logDir, entry.name))}`
+    const match = LOG_NAME.exec(entry.name)
+    if (!match) {
+      errors.push(`${display}: developer log filename must be YYYY-MM-DD-short-title.md`)
+      continue
+    }
+    const [, year, month, day] = match
+    const date = `${year}-${month}-${day}`
+    const parsed = new Date(`${date}T00:00:00Z`)
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+      errors.push(`${display}: invalid calendar date ${date}`)
+      continue
+    }
+    const logSlug = entry.name.replace(/\.md$/, '')
+    if (seenLogs.has(logSlug)) errors.push(`${display}: duplicate developer log slug "${logSlug}"`)
+    seenLogs.add(logSlug)
+    const data = matter(readFileSync(join(logDir, entry.name), 'utf8')).data ?? {}
+    if (typeof data.title !== 'string' || data.title.trim() === '') {
+      errors.push(`${display}: developer log title is required`)
+    }
+    if (typeof data.description !== 'string' || data.description.trim() === '') {
+      errors.push(`${display}: developer log description is required`)
+    }
+    const frontmatterDate =
+      data.date instanceof Date ? data.date.toISOString().slice(0, 10) : String(data.date ?? '')
+    if (!DATE_ONLY.test(frontmatterDate) || frontmatterDate !== date) {
+      errors.push(`${display}: frontmatter date must match the filename (${date})`)
+    }
   }
 }
 
