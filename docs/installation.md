@@ -55,7 +55,7 @@ The SVGs use `currentColor`, so inlining them lets them follow the text colour.
 
 ## CLI
 
-The CLI is published as `@moewolf/moe-icons-cli@0.0.3` and requires Node.js 22+:
+The CLI is published as `@moewolf/moe-icons-cli@0.0.6` and requires Node.js 22+:
 
 ```sh
 npm install -D @moewolf/moe-icons-cli
@@ -90,5 +90,5 @@ purchase; see [Free vs Pro](/free-vs-pro).
 | `moe-icons/react` not found | Confirm `moe-icons@0.0.17`; only `.`, `./react`, `./vue` are published. |
 | Icon renders huge / 300×150 | Pass `width`/`height` (React has no default size). |
 | Vue icon ignores `width` | Tailwind's `w-6 h-6` marker class may win; remove/override it or use CSS. |
-| `moeicons install` fails | Confirm `@moewolf/moe-icons-cli@0.0.3` and Node 22+, then run `moeicons doctor --check`. |
+| `moeicons install` fails | Confirm `@moewolf/moe-icons-cli@0.0.6` and Node 22+, then run `moeicons doctor --check`. |
 | Duplicate React/Vue versions | `moe-icons` pulls React/Vue as dependencies; dedupe or align versions. |

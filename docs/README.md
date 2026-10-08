@@ -61,13 +61,13 @@ mirrored to the private website repository and published to
 - Document released capabilities only, verified against the npm archives, not
   the working tree. The verified path is `moe-icons@0.0.17`
   (`moe-icons/react`, `moe-icons/vue`) plus website asset downloads and the
-  published CLI `@moewolf/moe-icons-cli@0.0.3` (icon resources `0.0.18`). The
+  published CLI `@moewolf/moe-icons-cli@0.0.6` (icon resources `0.0.19`). The
   CLI Free install needs no account; Pro install signs in and checks the
-  entitlement. Next.js and Nuxt are manual/uncertified; Windows is not
-  certified for interactive Pro flows.
-- Do not reintroduce removed claims such as a `size` prop, Provider
-  `defaultTheme`/`onThemeChange`, `downloadMode`, theme-level `icons`, or a
-  Vanilla `runtime.ts`.
+  entitlement. Next App Router and Nuxt SSR have production rendering and hydration checks;
+  Windows interactive Pro flows remain outside the verified scope.
+- Keep direct npm component examples separate from CLI-generated proxies. The
+  direct npm package uses width/height; CLI proxy props and runtime features
+  must be checked against the current CLI manual rather than assumed identical.
 - Developer log entries: use the `YYYY-MM-DD-short-title.md` filename, keep the
   frontmatter `date` equal to the filename date, and use the same slug in every
   language so the mirrored links line up.

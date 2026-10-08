@@ -77,9 +77,11 @@ verified for Vite React/Vue and Next.js App Router / Nuxt SSR. See the
 
 ## Editor plugin
 
-A VS Code extension for completion and diagnostics of CLI-generated exports is
-**in development and not yet published** to the marketplace. Treat it as a
-preview and do not rely on it as an install path yet.
+Install [Moe Icons for VS Code](https://marketplace.visualstudio.com/items?itemName=moewolf.moe-icons-plugins) after running CLI install and generate.
+The extension reads verified local exports for completion, semantic highlighting
+and diagnostics. Its account view reads the CLI session on the extension host;
+use `Moe Icons: Refresh Account` after logging in. The extension alone does not
+install icon resources.
 
 ## Styles and formats
 
@@ -90,6 +92,7 @@ preview and do not rely on it as an install path yet.
 | `moe-solid` | Free | SVG |
 | `moe-colored` | Free | SVG |
 | `moe-3d-metal` | Pro | PNG/WebP bitmaps (128/256/512) |
+| `moe-3d-plastic-green` | Pro | PNG/WebP bitmaps (128/256/512) |
 | `moe-duotone` | Pro | SVG |
 | `moe-pixel-lite-outline` | Pro | SVG |
 | `moe-pixel-outline` | Pro | SVG |
@@ -103,9 +106,9 @@ All vector style groups are SVG and use `currentColor` where applicable. The Pro
 
 | | Free | Pro |
 | --- | --- | --- |
-| Style groups | 4 | 10 (adds the 6 Pro groups) |
+| Style groups | 4 | 11 (adds the 7 Pro groups) |
 | Icons | 554 per group | 554 per group |
-| Formats | SVG | SVG; `moe-3d-metal` is PNG/WebP bitmaps (128/256/512) |
+| Formats | SVG | SVG; Metal and Plastic Green are PNG/WebP bitmaps (128/256/512) |
 | Account | Not required | Required, active entitlement |
 | Price | Free | One-time payment (see the pricing page) |
 | Usage | In your own products, per the license | In your own products, per the license |

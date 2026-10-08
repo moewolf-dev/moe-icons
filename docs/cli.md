@@ -1,13 +1,13 @@
 # CLI commands
 
-`@moewolf/moe-icons-cli@0.0.3` provides the `moeicons` command and requires
+`@moewolf/moe-icons-cli@0.0.6` provides the `moeicons` command and requires
 Node.js 22 or later. The CLI installs verified icon resources and generates
 local components. These components are imported from your project, separately
 from the direct `moe-icons` npm package.
 
 ## Release status
 
-This release uses icon resources `0.0.18`. Free installation needs no account;
+This release uses icon resources `0.0.19`. Free installation needs no account;
 Pro installation requires login and an active entitlement.
 
 | Integration | Verified scope |
@@ -26,7 +26,7 @@ examples retain their own support status; see [Next.js](/frameworks/next) and
 Run these commands in an existing React or Vue project:
 
 ```sh
-npm install -D @moewolf/moe-icons-cli@0.0.3
+npm install -D @moewolf/moe-icons-cli
 npx moeicons init
 ```
 

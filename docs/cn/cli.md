@@ -1,12 +1,12 @@
 # CLI 命令
 
-`@moewolf/moe-icons-cli@0.0.3` 提供 `moeicons` 命令，要求 Node.js 22 或更新版本。
+`@moewolf/moe-icons-cli@0.0.6` 提供 `moeicons` 命令，要求 Node.js 22 或更新版本。
 CLI 下载并验证图标资源，在项目内生成本地组件。这些组件从项目目录导入，与直接使用
 `moe-icons` npm 组件包的方式分别说明。
 
 ## 发布状态
 
-本版本使用 `0.0.18` 图标资源。Free 安装不需要账号；Pro 安装需要登录及有效授权。
+本版本使用 `0.0.19` 图标资源。Free 安装不需要账号；Pro 安装需要登录及有效授权。
 
 | 集成 | 已验证范围 |
 | --- | --- |
@@ -23,7 +23,7 @@ Windows Pro 流程与交互终端/PTY、Next Pages Router、自定义 Nuxt 模�
 在已有 React 或 Vue 项目中运行：
 
 ```sh
-npm install -D @moewolf/moe-icons-cli@0.0.3
+npm install -D @moewolf/moe-icons-cli
 npx moeicons init
 ```
 

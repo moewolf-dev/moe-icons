@@ -52,7 +52,7 @@ SVG 使用 `currentColor`，内联时可随文字颜色变化。
 
 ## CLI
 
-CLI 以 `@moewolf/moe-icons-cli@0.0.3` 发布，要求 Node.js 22+：
+CLI 以 `@moewolf/moe-icons-cli@0.0.6` 发布，要求 Node.js 22+：
 
 ```sh
 npm install -D @moewolf/moe-icons-cli
@@ -84,5 +84,5 @@ Pro 资源需要已激活授权的账号。已发布的组件包不包含 Pro，
 | 找不到 `moe-icons/react` | 确认是 `moe-icons@0.0.17`；只发布 `.`、`./react`、`./vue`。 |
 | 图标巨大 / 300×150 | 传 `width`/`height`（React 无默认尺寸）。 |
 | Vue 图标忽略 `width` | Tailwind 的 `w-6 h-6` 标记类可能优先；移除/覆盖或改用 CSS。 |
-| `moeicons install` 失败 | 确认 `@moewolf/moe-icons-cli@0.0.3` 与 Node 22+，然后运行 `moeicons doctor --check`。 |
+| `moeicons install` 失败 | 确认 `@moewolf/moe-icons-cli@0.0.6` 与 Node 22+，然后运行 `moeicons doctor --check`。 |
 | React/Vue 版本重复 | `moe-icons` 会引入 React/Vue 依赖；去重或对齐版本。 |

@@ -7,9 +7,9 @@ Moe Icons 提供无需账号的免费层级，以及解锁其余样式组的 Pro
 
 | | 免费 | 付费 |
 | --- | --- | --- |
-| 样式组 | `moe-outline`、`moe-lite-outline`、`moe-solid`、`moe-colored` | 全部样式组：额外包含 `moe-3d-metal`、`moe-duotone`、`moe-pixel-lite-outline`、`moe-pixel-outline`、`moe-pixel-solid`、`moe-sticker` |
+| 样式组 | `moe-outline`、`moe-lite-outline`、`moe-solid`、`moe-colored` | 全部样式组：额外包含 `moe-3d-metal`、`moe-3d-plastic-green`、`moe-duotone`、`moe-pixel-lite-outline`、`moe-pixel-outline`、`moe-pixel-solid`、`moe-sticker` |
 | 图标数量 | 每组 554 个 | 每组 554 个 |
-| 格式 | SVG | SVG；`moe-3d-metal` 为 PNG/WebP 位图（128/256/512） |
+| 格式 | SVG | SVG；Metal 和 Plastic Green 为 PNG/WebP 位图（128/256/512） |
 | 当前可用渠道 | npm 组件包（Moe Outline）、官网下载与 CLI | 有效 Pro 账号的官网下载与 CLI |
 | 官网搜索 | 浏览、复制并下载免费组 | 浏览、复制并下载全部组 |
 | 更新 | 免费线 | 以购买时展示的许可为准 |
@@ -19,7 +19,7 @@ Moe Icons 提供无需账号的免费层级，以及解锁其余样式组的 Pro
 "Moe Icons License Agreement" 是使用权利的事实源。撰写时（2026-10-01）Pro 为一次性
 购买，显示为 **39 美元**。请以线上价格页为准。
 
-CLI（`@moewolf/moe-icons-cli@0.0.3`，图标资源 `0.0.18`）可安装免费与 Pro 资源，
+CLI（`@moewolf/moe-icons-cli@0.0.6`，图标资源 `0.0.19`）可安装免费与 Pro 资源，
 并为 React、Vue、Vanilla 生成本地组件。免费安装无需账号；Pro 安装需要登录并校验
 授权。见 [CLI 发布状态](/cn/cli#发布状态)。
 
