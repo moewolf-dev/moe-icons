@@ -32,7 +32,7 @@ export function validateFreeReleaseBinding(binding, contractBytes) {
     throw new Error("free-release event is missing the binding object");
   }
   for (const field of Object.keys(binding)) {
-    if (!["releasePolicyCommit", "releasePolicySha256", "mediaContractVersion", "sourceManifestSchemaVersion", "releaseScope", "bitmapBatch"].includes(field)) {
+    if (!["releasePolicyCommit", "releasePolicySha256", "manifestSha256", "mediaContractVersion", "sourceManifestSchemaVersion", "releaseScope", "bitmapBatch"].includes(field)) {
       throw new Error(`free-release binding has unknown field "${field}"`);
     }
   }
@@ -41,6 +41,10 @@ export function validateFreeReleaseBinding(binding, contractBytes) {
   }
   if (!SHA256.test(String(binding.releasePolicySha256 || ""))) {
     throw new Error("invalid binding releasePolicySha256");
+  }
+  const manifestSha256 = binding.manifestSha256 === undefined ? undefined : String(binding.manifestSha256).toLowerCase();
+  if (manifestSha256 !== undefined && !SHA256.test(manifestSha256)) {
+    throw new Error("invalid binding manifestSha256");
   }
   const mediaVersion = Number(binding.mediaContractVersion);
   const schemaVersion = Number(binding.sourceManifestSchemaVersion);
@@ -60,6 +64,7 @@ export function validateFreeReleaseBinding(binding, contractBytes) {
   return {
     releasePolicyCommit: binding.releasePolicyCommit,
     releasePolicySha256: binding.releasePolicySha256,
+    ...(manifestSha256 ? { manifestSha256 } : {}),
     releaseScope: "free",
   };
 }

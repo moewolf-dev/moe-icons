@@ -145,6 +145,15 @@ test('DEV-20-01: public Free binding must match the checked-out contract and for
   assert.throws(() => validateFreeReleaseBinding(null, contractBytes), /missing the binding object/);
 });
 
+test('D01: public Free binder preserves a valid frozen Source manifest digest', () => {
+  const contractBytes = fs.readFileSync(path.join(root, 'contracts', 'release-policy', 'free-style-groups.v1.json'));
+  const sha = crypto.createHash('sha256').update(contractBytes).digest('hex');
+  const binding = { releasePolicyCommit: 'a'.repeat(40), releasePolicySha256: sha, manifestSha256: 'c'.repeat(64), mediaContractVersion: '2', sourceManifestSchemaVersion: '2', releaseScope: 'free' };
+  const result = validateFreeReleaseBinding(binding, contractBytes);
+  assert.equal(result.manifestSha256, binding.manifestSha256);
+  assert.throws(() => validateFreeReleaseBinding({ ...binding, manifestSha256: 'bad' }, contractBytes), /manifestSha256/);
+});
+
 test('DEV-20-01: free-release workflow validates the nested binding', () => {
   const workflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'free-release.yml'), 'utf8');
   assert.match(workflow, /toJson\(github\.event\.client_payload\.binding\)/);
