@@ -169,8 +169,8 @@ jobs:
           test -n "$GH_TOKEN"
           echo "::add-mask::$GH_TOKEN"
           mkdir "$RUNNER_TEMP/candidate"
-          gh api "repos/moewolf-dev/moe-icons-code-library/actions/artifacts/${ARTIFACT_ID}/zip" > "$RUNNER_TEMP/candidate.zip"
-          unzip -q "$RUNNER_TEMP/candidate.zip" -d "$RUNNER_TEMP/candidate"
+          node scripts/durable-release-artifact.cjs retrieve --id "$ARTIFACT_ID" --version "$VERSION" --run "$UPSTREAM_RUN_ID" --head "$GENERATOR_COMMIT" --zip "$RUNNER_TEMP/candidate.zip"
+          python3 scripts/unpack-release-artifact.py "$RUNNER_TEMP/candidate.zip" "$RUNNER_TEMP/candidate"
 
       - id: validate
         name: Revalidate public descriptor and all free archives
