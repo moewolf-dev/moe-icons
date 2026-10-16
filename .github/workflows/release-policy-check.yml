@@ -37,3 +37,4 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: node --test scripts/test-release-policy.mjs
+      - run: node --test scripts/test-small-pack-release-guard.mjs

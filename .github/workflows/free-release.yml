@@ -60,8 +60,22 @@ concurrency:
   group: free-release-${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
   cancel-in-progress: false
 
+# Legacy aggregate candidates are rejected before checkout, credentials or I/O.
+# A future package-set publisher requires independent acceptance before rollout.
 jobs:
+  small-pack-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Reject retired aggregate Free candidate
+        run: |
+          echo "::error::Free publication is paused during the small-package migration."
+          exit 78
+
   publish:
+    if: false
+    needs: [small-pack-policy]
     runs-on: ubuntu-latest
     # CODE_LIBRARY_ARTIFACT_READ_TOKEN is owned by this environment. Do not add
     # a repository secret with the same name: environment secrets take
