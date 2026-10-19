@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { verifySmallPackPin } from './verify-small-pack-pin.mjs';
 const require = createRequire(import.meta.url);
 const { publishFreeCandidate, verifyFreePackage } = require('./free-small-package.cjs');
-const { canonicalBytes, sha256, buildCandidateSet } = require('./vendor/small-pack/candidate-set.cjs');
+const { canonicalBytes, sha256, buildCandidateSet, createCandidateSet, validatePackagePages } = require('./vendor/small-pack/candidate-set.cjs');
 function unit({ tier = 'free', group = 'moe-outline', extra = {}, manifestScope = {}, links = false } = {}) {
   const scope = { kind: 'svg', tier, styleGroupId: group };
   const payload = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
@@ -117,6 +117,24 @@ test('vendored parsing modules retain pinned SHA-256 bytes', () => {
   const pin = JSON.parse(fs.readFileSync(new URL('./vendor/small-pack/PIN.json', import.meta.url)));
   assert.match(pin.sourceCommit, /^[a-f0-9]{40}$/, 'vendored modules must pin a full immutable Generator commit');
   for (const [name, digest] of Object.entries(pin.files)) assert.equal(sha256(fs.readFileSync(new URL('./vendor/small-pack/' + name, import.meta.url))), digest);
+});
+
+test('Free consumer rejects cross-page digest aliases and unresolved dependency references', () => {
+  const digest = 'f'.repeat(64);
+  const first = { kind: 'svg', tier: 'free', styleGroupId: 'moe-outline', packageSha256: digest, filename: `packages/${digest}.tgz`, resourceKey: 'svg/free/moe-outline', fullVersion: '1.0.0', compressedBytes: 1, expandedBytes: 1, fileCount: 1, dependencies: [] };
+  const second = { ...first, styleGroupId: 'moe-solid', resourceKey: 'svg/free/moe-solid' };
+  const packages = [first, second].map(row => canonicalBytes({ schemaVersion: 1, fullVersion: '1.0.0', tier: 'free', packages: [row] }));
+  const refs = packages.map((bytes, index) => ({ filename: `package-page-free-${String(index + 1).padStart(4, '0')}.json`, sha256: sha256(bytes), sizeBytes: bytes.length, packageCount: 1 }));
+  const root = createCandidateSet({ fullVersion: '1.0.0', tier: 'free', sourceCommit: 'a'.repeat(40), generatorCommit: 'b'.repeat(40), packagePages: refs });
+  const pages = Object.fromEntries(refs.map((ref, index) => [ref.filename, packages[index]]));
+  assert.throws(() => validatePackagePages(root, pages), /duplicate package digest across candidate set/);
+
+  const danglingDigest = 'd'.repeat(64);
+  const dangling = { ...first, styleGroupId: 'moe-game-blue', packageSha256: danglingDigest, filename: `packages/${danglingDigest}.tgz`, resourceKey: 'svg/free/moe-game-blue', dependencies: ['e'.repeat(64)] };
+  const danglingPage = canonicalBytes({ schemaVersion: 1, fullVersion: '1.0.0', tier: 'free', packages: [dangling] });
+  const danglingRef = { filename: 'package-page-free-0001.json', sha256: sha256(danglingPage), sizeBytes: danglingPage.length, packageCount: 1 };
+  const danglingRoot = createCandidateSet({ fullVersion: '1.0.0', tier: 'free', sourceCommit: 'a'.repeat(40), generatorCommit: 'b'.repeat(40), packagePages: [danglingRef] });
+  assert.throws(() => validatePackagePages(danglingRoot, { [danglingRef.filename]: danglingPage }), /missing dependency package/);
 });
 
 test('actual generator deterministic tar fixture validates through the independent Free consumer', async () => {

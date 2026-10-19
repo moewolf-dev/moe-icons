@@ -19,7 +19,14 @@ function fixture() {
   const transport = { async api(route) {
     routes.push(route);
     if (!route) return { full_name: repository, private: !flags.public, default_branch: 'main' };
-    if (route.includes('/jobs?')) return { jobs: flags.jobs || [{ name: 'assemble', conclusion: 'success' }, { name: 'durable', conclusion: 'success' }] };
+    if (route.includes('/jobs?')) {
+      const page = Number(new URLSearchParams(route.split('?')[1]).get('page'));
+      const defaultJobs = [{ name: 'assemble', conclusion: 'success' }, { name: 'durable', conclusion: 'success' }];
+      const configured = flags.jobPages?.[page];
+      if (configured) return configured;
+      const jobs = flags.jobs || defaultJobs;
+      return { total_count: jobs.length, jobs: page === 1 ? jobs : [] };
+    }
     if (route.startsWith('actions/')) return { id: 123, run_attempt: flags.wrongAttempt ? 2 : 1, head_sha: built.candidateSet.generatorCommit, head_branch: 'main', event: 'workflow_dispatch', path: '.github/workflows/small-pack-candidate.yml', display_title: flags.displayTitle || `Source package-set ${built.candidateSet.sourceCommit} ${sourceDispatchId}`, repository: { full_name: repository }, head_repository: { full_name: flags.fork ? 'fork/other' : repository }, status: 'completed', conclusion: 'failure' };
     if (route.startsWith('releases/tags/')) {
       const tag = route.slice('releases/tags/'.length); assert.match(tag, /^(candidate-set-v1-free-[a-f0-9]{64}|packages-v1-free-[a-f0-9]{2})$/);
@@ -43,6 +50,23 @@ test('fork, public upstream, wrong attempt and nonunique/failed producer stages 
   for (const flags of [{ fork: true }, { public: true }, { wrongAttempt: true }, { jobs: [{ name: 'assemble', conclusion: 'success' }, { name: 'durable', conclusion: 'failure' }] }, { jobs: [{ name: 'assemble', conclusion: 'success' }, { name: 'assemble', conclusion: 'failure' }, { name: 'durable', conclusion: 'success' }] }]) {
     const f = fixture(); Object.assign(f.flags, flags); await assert.rejects(readFreeUpstream(f)); assert.deepEqual(f.downloads, []);
   }
+});
+test('producer pagination finds required stages on later pages and rejects a changing total count', async () => {
+  const f = fixture();
+  f.flags.jobPages = {
+    1: { total_count: 102, jobs: Array.from({ length: 100 }, (_, index) => ({ name: `build-unit-${index}`, conclusion: 'success' })) },
+    2: { total_count: 102, jobs: [{ name: 'assemble', conclusion: 'success' }, { name: 'durable', conclusion: 'success' }] },
+  };
+  await readFreeUpstream(f);
+  assert.ok(f.routes.includes('actions/runs/123/attempts/1/jobs?per_page=100&page=2'));
+
+  const changed = fixture();
+  changed.flags.jobPages = {
+    1: { total_count: 101, jobs: Array.from({ length: 100 }, (_, index) => ({ name: `build-unit-${index}` })) },
+    2: { total_count: 102, jobs: [{ name: 'assemble' }, { name: 'durable' }] },
+  };
+  await assert.rejects(readFreeUpstream(changed), /count changed between pages/);
+  assert.deepEqual(changed.downloads, []);
 });
 test('Free package-set receipt binds the Generator run title to the Source commit and dispatch identity', async () => {
   const f = fixture(), { sourceDispatchId } = f;

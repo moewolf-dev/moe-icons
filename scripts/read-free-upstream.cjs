@@ -7,6 +7,8 @@ const { verifyFreePackage } = require('./free-small-package.cjs');
 const policy = require('../contracts/release-policy/free-style-groups.v1.json');
 const REPOSITORY = 'moewolf-dev/moe-icons-code-library';
 const WORKFLOW = '.github/workflows/small-pack-candidate.yml';
+const MAX_GENERATOR_JOBS = 300;
+const MAX_GENERATOR_JOB_PAGES = 3;
 const assert = (ok, message) => { if (!ok) throw Error(`free-upstream: ${message}`); };
 function upstreamTransport({ token, fetchImpl = globalThis.fetch }) {
   assert(typeof token === 'string' && token.length > 0 && !/[\r\n]/.test(token), 'existing private artifact-read token required');
@@ -69,7 +71,19 @@ async function readFreeUpstream({ binding, producer, sourceDispatchId, transport
     && run.display_title === `Source package-set ${binding.sourceCommit} ${sourceDispatchId}`,
   'Generator run title differs from Source commit/dispatch identity');
   const jobs = [];
-  for (let page = 1; page <= 3; page++) { const result = await transport.api(`${route}/jobs?per_page=100&page=${page}`); assert(Array.isArray(result.jobs) && result.jobs.length <= 100, 'invalid producer jobs'); jobs.push(...result.jobs); if (result.jobs.length < 100) break; assert(page < 3, 'producer job listing exceeds budget'); }
+  let totalCount;
+  for (let page = 1; page <= MAX_GENERATOR_JOB_PAGES; page += 1) {
+    const result = await transport.api(`${route}/jobs?per_page=100&page=${page}`);
+    assert(result && Number.isSafeInteger(result.total_count) && result.total_count >= 0
+      && result.total_count <= MAX_GENERATOR_JOBS && Array.isArray(result.jobs) && result.jobs.length <= 100,
+    'invalid or over-budget producer jobs listing');
+    if (totalCount === undefined) totalCount = result.total_count;
+    assert(result.total_count === totalCount, 'producer job count changed between pages');
+    jobs.push(...result.jobs);
+    if (jobs.length >= totalCount) break;
+    assert(page < MAX_GENERATOR_JOB_PAGES, 'producer job listing exceeds page budget');
+  }
+  assert(jobs.length === totalCount, 'producer jobs listing is incomplete');
   for (const name of ['assemble', 'durable']) { const matches = jobs.filter(job => job.name === name); assert(matches.length === 1 && matches[0].conclusion === 'success', 'unique successful assemble/durable stages required'); }
   const assets = await releaseAssets(transport, `candidate-set-v1-free-${binding.packageSetSha256}`);
   const rootBytes = await readAsset(transport, oneAsset(assets, 'candidate-set.json', undefined, undefined, MAX_ROOT_BYTES));
