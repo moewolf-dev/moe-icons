@@ -4,7 +4,7 @@
 // on the first batch of failures.
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, resolve, dirname, relative } from 'node:path'
-import matter from 'gray-matter'
+import { parseDocument } from 'yaml'
 
 const ROOT = process.cwd()
 const DOCS = join(ROOT, 'docs')
@@ -22,6 +22,29 @@ function walk(dir) {
 
 function rel(p) {
   return relative(DOCS, p).split('\\').join('/')
+}
+
+function parseFrontmatter(raw) {
+  if (!raw.startsWith('---')) return { content: raw, data: {} }
+
+  const opening = /^---[ \t]*\r?\n/.exec(raw)
+  if (!opening) return { content: raw, data: {} }
+
+  const closingPattern = /^(?:---|\.\.\.)[ \t]*\r?$/gm
+  closingPattern.lastIndex = opening[0].length
+  const closing = closingPattern.exec(raw)
+  if (!closing) throw new Error('frontmatter closing delimiter is missing')
+
+  const document = parseDocument(raw.slice(opening[0].length, closing.index))
+  if (document.errors.length > 0) {
+    throw new Error(document.errors.map((error) => error.message).join('; '))
+  }
+
+  const contentStart = closing.index + closing[0].length
+  return {
+    content: raw.slice(contentStart).replace(/^\r?\n/, ''),
+    data: document.toJS() ?? {},
+  }
 }
 
 // 1. docs/pro/ must never exist in the public repository.
@@ -104,7 +127,7 @@ for (const f of mdFiles) {
   let body = raw
   if (raw.startsWith('---')) {
     try {
-      body = matter(raw).content
+      body = parseFrontmatter(raw).content
     } catch (e) {
       errors.push(`${r}: frontmatter parse error: ${e.message}`)
       continue
@@ -233,7 +256,7 @@ for (const locale of registry?.locales ?? []) {
     const logSlug = entry.name.replace(/\.md$/, '')
     if (seenLogs.has(logSlug)) errors.push(`${display}: duplicate developer log slug "${logSlug}"`)
     seenLogs.add(logSlug)
-    const data = matter(readFileSync(join(logDir, entry.name), 'utf8')).data ?? {}
+    const data = parseFrontmatter(readFileSync(join(logDir, entry.name), 'utf8')).data ?? {}
     if (typeof data.title !== 'string' || data.title.trim() === '') {
       errors.push(`${display}: developer log title is required`)
     }

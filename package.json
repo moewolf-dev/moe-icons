@@ -10,8 +10,8 @@
     "test": "node --test scripts/test-distribution.mjs scripts/test-free-small-package.mjs scripts/test-github-free-package-store.mjs scripts/test-read-free-upstream.mjs scripts/test-durable-fallback.mjs scripts/test-publish-free-package-set.mjs scripts/test-dispatch-worker-package-set.mjs scripts/test-release-policy.mjs scripts/test-migrate-public-icons.mjs scripts/test-website-projection.mjs"
   },
   "devDependencies": {
-    "gray-matter": "^4.0.3",
-    "vitepress": "1.6.4"
+    "vitepress": "1.6.4",
+    "yaml": "^2.9.1"
   },
   "overrides": {
     "vite": "6.4.4"
