@@ -142,54 +142,40 @@ async function compareReleaseAssets(localDir, existingDir) {
   return compareReleaseAssets(localDir, existingDir, VERSION, sha(readFileSync(join(localDir, "release-descriptor.json"))));
 }
 
-test("R8: idempotency compare reports no drift for identical candidates", async () => {
+test("S00: legacy full-library release comparison fails closed", async () => {
   const local = mkdtempSync(join(tmpdir(), "rel-local-"));
   const existing = mkdtempSync(join(tmpdir(), "rel-existing-"));
   try {
     buildFixture(local);
     buildFixture(existing);
-    assert.deepStrictEqual(await compareReleaseAssets(local, existing), []);
+    await assert.rejects(compareReleaseAssets(local, existing), /legacy full-library release comparison is retired/);
   } finally {
     rmSync(local, { recursive: true, force: true });
     rmSync(existing, { recursive: true, force: true });
   }
 });
 
-test("R8: idempotency compare names the drifted asset (code/metadata/descriptor)", async () => {
+test("S00: legacy release comparison cannot read or reuse old aggregate assets", async () => {
   const local = mkdtempSync(join(tmpdir(), "rel-local-"));
   const existing = mkdtempSync(join(tmpdir(), "rel-existing-"));
   try {
     buildFixture(local);
     buildFixture(existing);
-    const metaPath = join(existing, `moe-icons-free-metadata-${VERSION}.tgz`);
-    writeFileSync(metaPath, createTarGz({ "metadata/MANUAL.md": "tampered\n", "metadata/catalog.json": "x", "metadata/manifest.json": "y" }));
-    assert.deepStrictEqual(await compareReleaseAssets(local, existing), [`moe-icons-free-metadata-${VERSION}.tgz`]);
-
-    buildFixture(existing);
-    const descriptorPath = join(existing, "release-descriptor.json");
-    writeFileSync(descriptorPath, readFileSync(descriptorPath).toString().replace(VERSION, "9.9.9"));
-    assert.ok((await compareReleaseAssets(local, existing)).includes("release-descriptor.json"));
+    await assert.rejects(compareReleaseAssets(local, existing), /legacy full-library release comparison is retired/);
   } finally {
     rmSync(local, { recursive: true, force: true });
     rmSync(existing, { recursive: true, force: true });
   }
 });
 
-test("R8: validate-free-release accepts a valid candidate and rejects a tampered metadata archive", () => {
+test("S00: legacy Free archive validator fails closed before reading a candidate", () => {
   const dir = mkdtempSync(join(tmpdir(), "rel-validate-"));
   const valid = mkdtempSync(join(tmpdir(), "rel-validate-valid-"));
   try {
     const { descriptorSha } = buildFixture(dir);
-    const ok = execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" });
-    assert.match(ok, /"metadata"/);
-    assert.match(ok, /"assets"/);
-
-    buildFixture(valid);
-    const metaPath = join(valid, `moe-icons-free-metadata-${VERSION}.tgz`);
-    writeFileSync(metaPath, gzipSync(Buffer.from("not-a-real-metadata-archive")));
-    assert.throws(() =>
-      execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), valid, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
-      /checksum|frozen files|archive/,
+    assert.throws(
+      () => execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
+      /legacy full-library Free publisher is retired/,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -197,7 +183,7 @@ test("R8: validate-free-release accepts a valid candidate and rejects a tampered
   }
 });
 
-test("R8: validate-free-release rejects a candidate with a pro node in the public descriptor", () => {
+test("S00: retired Free validator rejects every legacy candidate before parsing it", () => {
   const dir = mkdtempSync(join(tmpdir(), "rel-pro-"));
   try {
     const { descriptorSha } = buildFixture(dir);
@@ -208,24 +194,28 @@ test("R8: validate-free-release rejects a candidate with a pro node in the publi
     writeFileSync(descriptorPath, dirtyJson);
     assert.throws(
       () => execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, sha(Buffer.from(dirtyJson)), "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
-      /pro\/ent/,
+      /legacy full-library Free publisher is retired/,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("P0-8: free-release.yml is draft-first and publishes only after eight assets", () => {
+test("S00: legacy Free release job stays disabled until candidate-set publication exists", () => {
   const workflow = readFileSync(join(ROOT, ".github", "workflows", "free-release.yml"), "utf8");
-  const draftAt = workflow.indexOf('gh release create "$tag" --draft');
-  const latestAt = workflow.indexOf("write-latest-descriptor.mjs");
-  const countAt = workflow.indexOf('test "$count" = "$expected_count"');
-  const publishAt = workflow.indexOf('gh release edit "$tag" --draft=false');
-  assert.ok(draftAt >= 0, "must create a draft release");
-  assert.ok(latestAt > draftAt, "release-latest.json must be written after the draft exists");
-  assert.ok(countAt > latestAt, "must verify eight assets after attaching latest");
-  assert.ok(publishAt > countAt, "must publish only after the full readback");
-  assert.ok(!/gh release create "v\$\{VERSION\}"/.test(workflow), "must not create a published release directly");
+  assert.match(workflow, /publish:\n[\s\S]*?if: false/);
+  assert.match(workflow, /small-pack descriptor/i);
+  assert.match(workflow, /Block legacy Free release candidates/);
+  assert.match(workflow, /moe-icons-free-package-set/);
+  assert.doesNotMatch(workflow, /\.bin\b/, "the retired tier-wide Free payload must not remain in a workflow download or upload pattern");
+  assert.doesNotMatch(workflow, /moe-icons-free-resource-index-/, "the retired tier-wide Free resource index must not remain in a workflow asset inventory");
+  assert.match(workflow, /publish-package-set:[\s\S]*?node scripts\/publish-free-package-set\.cjs/);
+  assert.ok(workflow.indexOf('node scripts/verify-small-pack-pin.mjs') < workflow.indexOf('node scripts/publish-free-package-set.cjs'), 'validate vendored parser pins before reading or publishing producer packages');
+  assert.match(workflow, /dispatch-worker-package-set\.cjs/);
+  assert.match(workflow, /MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: \$\{\{ secrets\.MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN \}\}/);
+  assert.match(workflow, /wait for R2\/D1 promotion/);
+  assert.match(workflow, /CODE_LIBRARY_ARTIFACT_READ_TOKEN: \$\{\{ secrets\.CODE_LIBRARY_ARTIFACT_READ_TOKEN \}\}/);
+  assert.match(readFileSync(join(ROOT, "scripts", "write-latest-descriptor.mjs"), "utf8"), /legacy full-library latest-descriptor writer is retired/);
 });
 
 test("R-P0-2: free-release manual runs cannot bypass the kill switch", () => {
@@ -236,14 +226,14 @@ test("R-P0-2: free-release manual runs cannot bypass the kill switch", () => {
   assert.doesNotMatch(workflow, /\n\s*echo "write_allowed=1" >> "\$GITHUB_OUTPUT"\n\s*$/);
 });
 
-test("R-P0-10: wrong sidecar and extra asset are rejected", async () => {
+test("S00: retired Free writer and release comparison cannot read legacy assets", async () => {
   const dir = mkdtempSync(join(tmpdir(), "rel-sidecar-"));
   try {
     const { descriptorSha } = buildFixture(dir);
     writeFileSync(join(dir, `moe-icons-free-${VERSION}.tgz.sha256`), `${"0".repeat(64)}  moe-icons-free-${VERSION}.tgz\n`);
     assert.throws(
       () => execFileSync(process.execPath, [join(ROOT, "scripts", "validate-free-release.mjs"), dir, VERSION, descriptorSha, "a".repeat(40), "b".repeat(40)], { encoding: "utf8" }),
-      /sidecar digest mismatch/,
+      /legacy full-library Free publisher is retired/,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -259,7 +249,7 @@ test("R-P0-10: wrong sidecar and extra asset are rejected", async () => {
       JSON.stringify({ schemaVersion: 1, tier: "free", fullVersion: VERSION, descriptorSha256: sha(readFileSync(join(existing, "release-descriptor.json"))), assets: {} }),
     );
     writeFileSync(join(existing, "extra.tgz"), "extra");
-    await assert.rejects(compareReleaseAssets(local, existing), /does not match the descriptor/);
+    await assert.rejects(compareReleaseAssets(local, existing), /legacy full-library release comparison is retired/);
   } finally {
     rmSync(local, { recursive: true, force: true });
     rmSync(existing, { recursive: true, force: true });
@@ -287,11 +277,11 @@ function attachSelectedResources(dir,mutate){
  for(const [ref,content]of [[indexRef,bytes],[bundleRef,bundle]]){writeFileSync(join(dir,ref.filename),content);writeFileSync(join(dir,ref.filename+'.sha256'),`${ref.sha256}  ${ref.filename}\n`);}
  const json=JSON.stringify(descriptor);writeFileSync(join(dir,'release-descriptor.json'),json);return sha(Buffer.from(json));
 }
-test('N04: publishes all twelve selected assets and rejects mismatched tier/ranges/content',()=>{
+test('S00: Free validation refuses the legacy tier-wide resources bundle',()=>{
  for(const mutate of [undefined,index=>{index.tier='pro';},index=>{index.files['react/moe-outline/UiSearch.js'].offset=1;},index=>{index.files['react/moe-outline/UiSearch.js'].sha256='a'.repeat(64);},index=>{index.files['react/moe-metal/UiSearch.js']=index.files['react/moe-outline/UiSearch.js'];delete index.files['react/moe-outline/UiSearch.js'];}]){
-  const dir=mkdtempSync(join(tmpdir(),'free-selected-'));try{buildFixture(dir);const digest=attachSelectedResources(dir,mutate);const validate=()=>execFileSync(process.execPath,[join(ROOT,'scripts/validate-free-release.mjs'),dir,VERSION,digest,'a'.repeat(40),'b'.repeat(40)],{stdio:'pipe'});if(mutate)assert.throws(validate);else assert.doesNotThrow(validate);}finally{rmSync(dir,{recursive:true,force:true});}
+  const dir=mkdtempSync(join(tmpdir(),'free-selected-'));try{buildFixture(dir);const digest=attachSelectedResources(dir,mutate);const validate=()=>execFileSync(process.execPath,[join(ROOT,'scripts/validate-free-release.mjs'),dir,VERSION,digest,'a'.repeat(40),'b'.repeat(40)],{stdio:'pipe'});assert.throws(validate,/legacy full-library Free publisher is retired/);}finally{rmSync(dir,{recursive:true,force:true});}
  }
 });
-test('N04: idempotent readback includes immutable resources and reports drift',async()=>{
- const local=mkdtempSync(join(tmpdir(),'selected-local-')),existing=mkdtempSync(join(tmpdir(),'selected-existing-'));try{buildFixture(local);buildFixture(existing);attachSelectedResources(local);attachSelectedResources(existing);assert.deepEqual(await compareReleaseAssets(local,existing),[]);const name=`moe-icons-free-resources-${VERSION}.bin`;writeFileSync(join(existing,name),'changed');assert.ok((await compareReleaseAssets(local,existing)).includes(name));}finally{rmSync(local,{recursive:true,force:true});rmSync(existing,{recursive:true,force:true});}
+test('S00: Free release comparison refuses the legacy immutable resources contract',async()=>{
+ const local=mkdtempSync(join(tmpdir(),'selected-local-')),existing=mkdtempSync(join(tmpdir(),'selected-existing-'));try{buildFixture(local);buildFixture(existing);attachSelectedResources(local);attachSelectedResources(existing);await assert.rejects(compareReleaseAssets(local,existing),/legacy full-library release comparison is retired/);}finally{rmSync(local,{recursive:true,force:true});rmSync(existing,{recursive:true,force:true});}
 });

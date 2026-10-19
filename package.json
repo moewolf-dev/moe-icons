@@ -7,7 +7,7 @@
   "scripts": {
     "docs:check": "node scripts/docs-check.mjs",
     "docs:build": "vitepress build docs",
-    "test": "node --test scripts/test-distribution.mjs scripts/test-release-policy.mjs scripts/test-migrate-public-icons.mjs scripts/test-website-projection.mjs scripts/test-durable-fallback.mjs"
+    "test": "node --test scripts/test-distribution.mjs scripts/test-free-small-package.mjs scripts/test-github-free-package-store.mjs scripts/test-read-free-upstream.mjs scripts/test-durable-fallback.mjs scripts/test-publish-free-package-set.mjs scripts/test-dispatch-worker-package-set.mjs scripts/test-release-policy.mjs scripts/test-migrate-public-icons.mjs scripts/test-website-projection.mjs"
   },
   "devDependencies": {
     "gray-matter": "^4.0.3",

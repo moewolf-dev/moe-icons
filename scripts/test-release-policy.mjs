@@ -163,20 +163,30 @@ test('DEV-20-01: free-release workflow validates the nested binding', () => {
   assert.match(workflow, /github\.event\.client_payload\.artifact\.id/);
 });
 
-test('DEV-20-05: public probe takes frozen artifact/run/digest inputs and reports stable statuses', () => {
+test('S00: legacy Free release entry gives no token permissions to the workflow or policy gate', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'free-release.yml'), 'utf8');
+  assert.match(workflow, /^permissions: \{\}$/m);
+  assert.match(workflow, /small-pack-policy:[\s\S]*?permissions: \{\}[\s\S]*?exit 78/);
+  assert.match(workflow, /publish:\n[\s\S]*?\n    if: false\n/);
+});
+
+test('DEV-20-05: public probe reads only exact bounded small-package artifact metadata', () => {
   const workflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'secrets-permission-probe.yml'), 'utf8');
-  for (const input of ['artifact_id', 'expected_sha256', 'expected_head_sha', 'expected_run_id']) {
+  for (const input of ['artifact_id', 'expected_artifact_name', 'expected_head_sha', 'expected_run_id']) {
     assert.match(workflow, new RegExp(`${input}:`), `probe input ${input} required`);
   }
   assert.match(workflow, /PRESENT=/);
   assert.match(workflow, /AUTH_OK=/);
-  assert.match(workflow, /SCOPE_OK=/);
+  assert.match(workflow, /SCOPE_OK=METADATA_ONLY_OK/);
   assert.match(workflow, /TARGET_OK=/);
-  assert.match(workflow, /expired/);
+  assert.match(workflow, /size_in_bytes/);
+  assert.match(workflow, /5 \* 1024 \* 1024/);
+  assert.match(workflow, /moe-small-\(plan\|record\|wave-results\|candidate\|durable\)/);
   assert.doesNotMatch(workflow, /ARTIFACT_ID:\s*"[0-9]+"/, 'no hard-coded artifact id');
-  // FIX-22-E: run/head are required and TARGET_OK is set only after the digest check.
+  assert.doesNotMatch(workflow, /actions\/artifacts\/\$\{ARTIFACT_ID\}\/zip|probe-artifact\.zip|sha256sum/,
+    'permission probe must never download or hash an artifact payload');
   assert.doesNotMatch(workflow, /expected_head_sha:[\s\S]{0,60}required:\s*false/, 'head sha must be required');
-  assert.ok(workflow.indexOf('TARGET_OK=OK') > workflow.indexOf('artifact sha256'), 'TARGET_OK must follow the digest check');
+  assert.ok(workflow.indexOf('TARGET_OK=OK') > workflow.indexOf('producer run_id does not match'), 'TARGET_OK must follow exact producer identity checks');
 });
 
 test('FIX-22-A: public commit must really contain the pinned contract bytes', async () => {

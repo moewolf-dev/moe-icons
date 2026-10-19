@@ -1,16 +1,21 @@
 name: Publish validated free artifact
 
+# CI FLOW CONTRACT: Free publication consumes independently verified bounded
+# packages. Never download the generator's aggregate Actions ZIP or repackage all
+# release files into a single candidate archive. The legacy publisher is blocked
+# until the small-pack descriptor and consumers migrate.
+
 # E2E-F4A (ICON-E2E-0907): the public repo is not a build source. It consumes
 # the free-only candidate produced by moe-icons-code-library AFTER clitest/
 # webtest + resource acceptance, re-verifies every byte, and publishes the
 # immutable `v<resourceVersion>` Release. No human approval / required reviewer.
 # `workflow_dispatch` is retained only for `dry_run:true` (no writes).
 
-run-name: acceptance ${{ github.event.client_payload.correlationId || inputs.correlationId || github.sha }}
+run-name: ${{ github.event.action == 'moe-icons-free-package-set' && 'free package-set' || 'acceptance' }} ${{ github.event.client_payload.correlationId || inputs.correlationId || github.sha }}
 
 on:
   repository_dispatch:
-    types: [moe-icons-free-release]
+    types: [moe-icons-free-release, moe-icons-free-package-set]
   workflow_dispatch:
     inputs:
       resourceVersion:
@@ -52,16 +57,29 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: write
-  issues: write
+permissions: {}
 
 concurrency:
-  group: free-release-${{ github.event.client_payload.resourceVersion || inputs.resourceVersion }}
+  group: free-release-${{ github.event.client_payload.binding.fullVersion || github.event.client_payload.resourceVersion || inputs.resourceVersion }}
   cancel-in-progress: false
 
 jobs:
+  small-pack-policy:
+    if: github.event.action != 'moe-icons-free-package-set'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Block legacy Free release candidates
+        run: |
+          echo "::error::Free publication is paused until it consumes per-group package identities."
+          exit 78
+
   publish:
+    # Legacy free tier archive publication stays disabled independently of
+    # the policy job until the package-set publisher is ready.
+    if: false
+    needs: [small-pack-policy]
     runs-on: ubuntu-latest
     # CODE_LIBRARY_ARTIFACT_READ_TOKEN is owned by this environment. Do not add
     # a repository secret with the same name: environment secrets take
@@ -205,8 +223,6 @@ jobs:
             --pattern "moe-icons-free-${VERSION}.tgz*" \
             --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
-            --pattern "moe-icons-free-resource-index-${VERSION}.json.gz*" \
-            --pattern "moe-icons-free-resources-${VERSION}.bin*" \
             --pattern "release-descriptor.json" \
             --pattern "release-latest.json" \
             --dir "$RUNNER_TEMP/existing"
@@ -234,12 +250,7 @@ jobs:
           # R-P0-10: a wrong same-name asset in a draft is deleted and re-uploaded;
           # a published Release is never modified.
           mkdir -p "$RUNNER_TEMP/draft"
-          resource_assets=()
-          if node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1])).free.resources ? 0 : 1)" "$RUNNER_TEMP/candidate/release-descriptor.json"; then
-            resource_assets=("moe-icons-free-resource-index-${VERSION}.json.gz" "moe-icons-free-resource-index-${VERSION}.json.gz.sha256" "moe-icons-free-resources-${VERSION}.bin" "moe-icons-free-resources-${VERSION}.bin.sha256")
-          fi
-          for asset in "${resource_assets[@]}" \
-            "moe-icons-free-${VERSION}.tgz" \
+          for asset in "moe-icons-free-${VERSION}.tgz" \
             "moe-icons-free-${VERSION}.tgz.sha256" \
             "moe-icons-free-assets-${VERSION}.tgz" \
             "moe-icons-free-assets-${VERSION}.tgz.sha256" \
@@ -272,8 +283,6 @@ jobs:
             --pattern "moe-icons-free-${VERSION}.tgz*" \
             --pattern "moe-icons-free-assets-${VERSION}.tgz*" \
             --pattern "moe-icons-free-metadata-${VERSION}.tgz*" \
-            --pattern "moe-icons-free-resource-index-${VERSION}.json.gz*" \
-            --pattern "moe-icons-free-resources-${VERSION}.bin*" \
             --pattern "release-descriptor.json" \
             --dir "$RUNNER_TEMP/uploaded"
           # Recompute every uploaded digest from the Release itself.
@@ -283,7 +292,7 @@ jobs:
             gh release upload "$tag" "$RUNNER_TEMP/uploaded/release-latest.json"
           fi
           count="$(gh release view "$tag" --json assets --jq '.assets | length')"
-          expected_count="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.argv[1])).free.resources ? '12' : '8')" "$RUNNER_TEMP/candidate/release-descriptor.json")"
+          expected_count=8
           test "$count" = "$expected_count" || { echo "expected $expected_count assets on the draft, got $count" >&2; exit 1; }
 
       - name: Publish the validated Release
@@ -319,3 +328,60 @@ jobs:
             --correlation-id "${CORRELATION_ID:-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-free-release}" \
             --attempt "${GITHUB_RUN_ATTEMPT}" \
             --conclusion "failure"
+
+  publish-package-set:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'moe-icons-free-package-set'
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: write
+    environment: free-release
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Verify pinned package-set parser modules
+        run: node scripts/verify-small-pack-pin.mjs
+      - name: Enforce the Free resource writer switch
+        env:
+          MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
+        run: |
+          set -euo pipefail
+          if [ "$MOEICONS_AUTO_RELEASE_ENABLED" != "true" ]; then
+            echo "::error::Free package-set publication is paused by MOEICONS_AUTO_RELEASE_ENABLED."
+            exit 78
+          fi
+      - name: Authenticate exact private Free set and publish packages one at a time
+        env:
+          CODE_LIBRARY_ARTIFACT_READ_TOKEN: ${{ secrets.CODE_LIBRARY_ARTIFACT_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
+        run: node scripts/publish-free-package-set.cjs
+      - name: Dispatch exact Free package set to Worker and wait for R2/D1 promotion
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_SHA: ${{ github.sha }}
+          FREE_PACKAGE_SET_REPORT: free-package-set-report.json
+          MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: ${{ secrets.MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN }}
+        run: node scripts/dispatch-worker-package-set.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: worker-package-set-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: worker-package-set-dispatch.json
+          if-no-files-found: ignore
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: free-package-set-${{ github.run_id }}-${{ github.run_attempt }}
+          path: free-package-set-report.json
+          if-no-files-found: ignore
+          retention-days: 14
+          compression-level: 0

@@ -1,0 +1,11 @@
+# Free package-set publication v1
+
+Status: Free publication and the Worker handoff are implemented locally; neither workflow nor either writer switch has been deployed or exercised against GitHub.
+
+The Generator dispatches `moe-icons-free-package-set` only after its private durable job publishes the Free/Pro roots and source-candidate registry. Its client payload binds the exact Free root digest, full version, Source commit, Generator commit, original Generator run/attempt and Source dispatch identity. The Free workflow title uses a deterministic correlation hash over the Source dispatch ID and package-set digest. Generator reuses an existing run, reconciles a lost dispatch response by that ID, and waits for terminal completion.
+
+The Free workflow requires its own `MOEICONS_AUTO_RELEASE_ENABLED=true` switch. It authenticates the private Generator repository, exact successful `assemble` and `durable` jobs, the correlated Generator run title, and the Free-only candidate root/pages. Each selected package is verified against its row and Free group policy, then published as an immutable content-addressed release asset and read back. Tier pages/root follow, and the immutable version pointer is written last. Existing identical objects are reused; a conflict or missing object fails closed. There is no aggregate archive or mutable `latest` fallback.
+
+After immutable Free publication, the Free workflow dispatches the exact root/set identity to Worker and waits for that correlated Worker run to finish. Worker re-reads the public Free pointer/root/pages/packages, verifies each package digest and Free scope, writes content-addressed Free-only R2 objects, persists immutable D1 rows, and advances its Free stable pointer with a compare-and-swap. The Worker API exposes only the Free stable identity today; the CLI and website do not yet consume the Worker package catalog.
+
+Neither workflow nor writer switch has been deployed or exercised against GitHub/Cloudflare. The Free dispatch token, Worker Actions-read token and Cloudflare/R2 permissions must be provisioned and verified by names/scope before live acceptance. The pipeline still does not project the website, dispatch CLI/npm/plugin consumers, run cross-platform/browser acceptance, or write the final release ledger; recovery from terminal cross-repository failures remains unverified.
