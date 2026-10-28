@@ -58,6 +58,14 @@ function createRecorder({ scope, now = () => new Date().toISOString() } = {}) {
     if (status === 'complete' && responseBytes === null) fail('a complete attempt requires responseBytes');
     if (status === 'failed' && responseBytes !== null) fail('a failed attempt must leave responseBytes unknown');
     if (deliveredBytes !== null && responseBytes !== null && deliveredBytes > responseBytes) fail('deliveredBytes exceeds responseBytes');
+    const contentSha256 = entry.contentSha256 === undefined ? null : entry.contentSha256;
+    if (contentSha256 !== null && !/^[a-f0-9]{64}$/.test(contentSha256)) fail('contentSha256 must be 64 lowercase hex characters or null');
+    const digestVerified = entry.digestVerified === undefined ? null : entry.digestVerified;
+    if (digestVerified !== null && typeof digestVerified !== 'boolean') fail('digestVerified must be true, false or null');
+    // A complete attempt may skip digest verification only when the route has no
+    // declared digest (digestVerified=null); a mismatch is always a failure.
+    if (status === 'complete' && digestVerified === false) fail('a verified-false digest cannot be a complete attempt');
+    if (status === 'failed' && digestVerified === true) fail('a failed attempt cannot claim a verified digest');
     entries.push({
       callId,
       route,
@@ -66,7 +74,8 @@ function createRecorder({ scope, now = () => new Date().toISOString() } = {}) {
       responseBytes,
       deliveredBytes,
       expectedBytes: entry.expectedBytes === undefined ? null : entry.expectedBytes,
-      digestVerified: entry.digestVerified === true,
+      contentSha256,
+      digestVerified,
       expectedFailure: entry.expectedFailure === true,
       errorClass: entry.errorClass ? String(entry.errorClass).slice(0, 64) : null,
       httpStatus: Number.isInteger(entry.httpStatus) ? entry.httpStatus : null,
@@ -109,7 +118,8 @@ function createRecorder({ scope, now = () => new Date().toISOString() } = {}) {
       expectedFailedAttempts: failed.filter((entry) => entry.expectedFailure === true).length,
       failedCalls,
       completeAttempts: entries.filter((entry) => entry.status === 'complete').length,
-      verifiedDownloads: entries.filter((entry) => entry.status === 'complete' && entry.digestVerified).length,
+      verifiedDownloads: entries.filter((entry) => entry.status === 'complete' && entry.digestVerified === true).length,
+      unmatchedDigests: entries.filter((entry) => entry.status === 'complete' && entry.digestVerified === null).length,
       responseBytes: measured.reduce((sum, entry) => sum + entry.responseBytes, 0),
       deliveredBytesOnFailure: failed.reduce((sum, entry) => sum + (entry.deliveredBytes || 0), 0),
       expectedBytes: entries.filter((entry) => entry.expectedBytes !== null).reduce((sum, entry) => sum + entry.expectedBytes, 0),

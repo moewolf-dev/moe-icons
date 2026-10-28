@@ -76,8 +76,8 @@ async function downloadOnce(route,file,metadata,recorder,callId,attempt){
  const completed=new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(new Error('artifact download failed',{cause:{transient:timedOut || transient({message:stderr})}})));});
  try{
   await Promise.all([completed,pipeline(child.stdout,new Transform({transform(chunk,_,callback){size+=chunk.length;if(size>metadata.size_in_bytes || size>MAX_ZIP_BYTES)return callback(Error('artifact download exceeds budget'));hash.update(chunk);callback(null,chunk);}}),fs.createWriteStream(file,{flags:'wx',mode:0o600}))]);
-  assert.equal(size,metadata.size_in_bytes,'downloaded ZIP size');assert.equal(hash.digest('hex'),metadata.digest.slice(7),'downloaded ZIP digest');
-  recorder?.record({callId,route,attempt,status:'complete',responseBytes:size,deliveredBytes:size,expectedBytes:metadata.size_in_bytes,digestVerified:true,startedAt,finishedAt:new Date().toISOString()});
+  assert.equal(size,metadata.size_in_bytes,'downloaded ZIP size');const actualSha256=hash.digest('hex');assert.equal(actualSha256,metadata.digest.slice(7),'downloaded ZIP digest');
+  recorder?.record({callId,route,attempt,status:'complete',responseBytes:size,deliveredBytes:size,expectedBytes:metadata.size_in_bytes,contentSha256:actualSha256,digestVerified:true,startedAt,finishedAt:new Date().toISOString()});
  }catch(error){
   // A failed attempt never claims a response total: only the prefix that the
   // consumer actually received is known, so `responseBytes` stays null.
