@@ -28,7 +28,7 @@ function upstreamTransport({ token, fetchImpl = globalThis.fetch }) {
   }
   return {
     async api(route) {
-      assert(route === '' || /^(releases\/tags\/(candidate-set-v1-free-[a-f0-9]{64}|packages-v1-free-[a-f0-9]{2})|releases\/[1-9]\d*\/assets\?per_page=100&page=(?:[1-9]|10|11)|actions\/runs\/[1-9]\d*\/attempts\/[1-9]\d*(?:\/jobs\?per_page=100&page=[1-3])?)$/.test(route), 'unsupported read-only private route');
+      assert(route === '' || /^(releases\/tags\/(candidate-set-v1-free-[a-f0-9]{64}|candidate-source-v2-[a-f0-9]{40}|packages-v1-free-[a-f0-9]{2})|releases\/[1-9]\d*\/assets\?per_page=100&page=(?:[1-9]|10|11)|actions\/runs\/[1-9]\d*\/attempts\/[1-9]\d*(?:\/jobs\?per_page=100&page=[1-3])?)$/.test(route), 'unsupported read-only private route');
       return JSON.parse(await request(base + (route ? '/' + route : ''), { ...headers, Accept: 'application/vnd.github+json' }, 1024 ** 2));
     },
     async download(asset, maximum) {
@@ -60,13 +60,42 @@ async function readAsset(transport, asset) {
   const bytes = await transport.download(asset, asset.size);
   assert(Buffer.isBuffer(bytes) && bytes.length === asset.size && `sha256:${sha256(bytes)}` === asset.digest, 'private asset readback mismatch'); return bytes;
 }
+const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
+  && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+async function verifyReusedRoot({ transport, binding, producer, sourceDispatchId, run, rootBytes }) {
+  const assets = await releaseAssets(transport, `candidate-source-v2-${binding.sourceCommit}`);
+  const registryBytes = await readAsset(transport, oneAsset(assets, 'source-candidate.json', undefined, undefined, MAX_ROOT_BYTES));
+  const record = JSON.parse(registryBytes);
+  assert(registryBytes.equals(canonicalBytes(record)) && exactKeys(record, ['schemaVersion', 'sourceCommit', 'sourceVersion', 'sourceContentHash', 'sourceIndexSha256', 'sourceProducer', 'sourceReleaseAttempt', 'generatorCommit', 'producer', 'candidateSets', 'recordSha256']), 'exact Source registry required');
+  const { recordSha256, ...projection } = record;
+  assert(/^[a-f0-9]{64}$/.test(recordSha256 || '') && sha256(canonicalBytes(projection)) === recordSha256
+    && record.schemaVersion === 2 && record.sourceCommit === binding.sourceCommit && record.sourceVersion === binding.fullVersion
+    && record.generatorCommit === binding.generatorCommit && exactKeys(record.candidateSets, ['free', 'pro'])
+    && record.candidateSets.free === binding.packageSetSha256 && /^[a-f0-9]{64}$/.test(record.candidateSets.pro || ''), 'Source registry does not bind Free candidate');
+  const filename = `execution-${producer.runId}-${producer.runAttempt}.json`;
+  const bytes = await readAsset(transport, oneAsset(assets, filename, undefined, undefined, MAX_ROOT_BYTES));
+  const witness = JSON.parse(bytes);
+  assert(bytes.equals(canonicalBytes(witness)) && exactKeys(witness, ['schemaVersion', 'sourceCommit', 'sourceDispatchId', 'registrySha256', 'producer', 'candidates'])
+    && witness.schemaVersion === 1 && witness.sourceCommit === binding.sourceCommit && witness.sourceDispatchId === sourceDispatchId
+    && witness.registrySha256 === recordSha256 && exactKeys(witness.producer, ['runId', 'runAttempt', 'headSha'])
+    && String(witness.producer.runId) === String(producer.runId) && witness.producer.runAttempt === producer.runAttempt
+    && witness.producer.headSha === run.head_sha && exactKeys(witness.candidates, ['free', 'pro']), 'execution witness identity mismatch');
+  for (const tier of ['free', 'pro']) {
+    const candidate = witness.candidates[tier];
+    assert(exactKeys(candidate, ['packageSetSha256', 'candidateRootSha256', 'candidateRootBytes'])
+      && candidate.packageSetSha256 === record.candidateSets[tier] && /^[a-f0-9]{64}$/.test(candidate.candidateRootSha256 || '')
+      && Number.isSafeInteger(candidate.candidateRootBytes) && candidate.candidateRootBytes > 0 && candidate.candidateRootBytes <= MAX_ROOT_BYTES, 'execution witness candidate invalid');
+  }
+  assert(witness.candidates.free.candidateRootSha256 === sha256(rootBytes)
+    && witness.candidates.free.candidateRootBytes === rootBytes.length, 'execution witness Free root mismatch');
+}
 async function readFreeUpstream({ binding, producer, sourceDispatchId, transport }) {
   assert(binding && /^[a-f0-9]{64}$/.test(binding.packageSetSha256 || '') && /^[a-f0-9]{40}$/.test(binding.sourceCommit || '') && /^[a-f0-9]{40}$/.test(binding.generatorCommit || ''), 'exact Free acceptance binding required');
   assert(producer && /^[1-9]\d*$/.test(String(producer.runId)) && Number.isSafeInteger(producer.runAttempt) && producer.runAttempt > 0, 'exact original producer required');
   const repo = await transport.api(''); assert(repo.full_name === REPOSITORY && repo.private === true && repo.default_branch === 'main', 'private upstream authority mismatch');
   const route = `actions/runs/${producer.runId}/attempts/${producer.runAttempt}`;
   const run = await transport.api(route);
-  assert(String(run.id) === String(producer.runId) && run.run_attempt === producer.runAttempt && run.head_sha === binding.generatorCommit && run.head_branch === 'main' && ['push', 'workflow_dispatch', 'repository_dispatch'].includes(run.event) && [WORKFLOW, WORKFLOW + '@refs/heads/main'].includes(run.path) && run.repository?.full_name === REPOSITORY && run.head_repository?.full_name === REPOSITORY, 'untrusted original generator producer');
+  assert(String(run.id) === String(producer.runId) && run.run_attempt === producer.runAttempt && /^[a-f0-9]{40}$/.test(run.head_sha || '') && run.head_branch === 'main' && ['push', 'workflow_dispatch', 'repository_dispatch'].includes(run.event) && [WORKFLOW, WORKFLOW + '@refs/heads/main'].includes(run.path) && run.repository?.full_name === REPOSITORY && run.head_repository?.full_name === REPOSITORY, 'untrusted original generator producer');
   assert(/^[a-f0-9]{64}$/.test(sourceDispatchId || '')
     && run.display_title === `Source package-set ${binding.sourceCommit} ${sourceDispatchId}`,
   'Generator run title differs from Source commit/dispatch identity');
@@ -89,6 +118,7 @@ async function readFreeUpstream({ binding, producer, sourceDispatchId, transport
   const rootBytes = await readAsset(transport, oneAsset(assets, 'candidate-set.json', undefined, undefined, MAX_ROOT_BYTES));
   const root = parseCandidateSet(rootBytes); assert(root.tier === 'free', 'Pro root rejected');
   for (const key of ['fullVersion', 'sourceCommit', 'generatorCommit', 'packageSetSha256']) assert(root[key] === binding[key], 'Free root differs from acceptance binding');
+  if (run.head_sha !== binding.generatorCommit) await verifyReusedRoot({ transport, binding, producer, sourceDispatchId, run, rootBytes });
   assert(root.packagePages.reduce((sum, ref) => sum + ref.sizeBytes, 0) <= 16 * 1024 ** 2, 'Free metadata exceeds coordinator budget');
   const allowedNames = new Set(['candidate-set.json', ...root.packagePages.map(ref => ref.filename)]);
   assert(assets.every(a => allowedNames.has(a.name) || /^verified-[1-9]\d*-[a-f0-9]{64}\.json$/.test(a.name)), 'foreign payload in Free metadata release');
