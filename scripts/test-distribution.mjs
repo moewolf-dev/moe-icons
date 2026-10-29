@@ -212,7 +212,7 @@ test("S00: legacy Free release job stays disabled until candidate-set publicatio
   assert.match(workflow, /publish-package-set:[\s\S]*?node scripts\/publish-free-package-set\.cjs/);
   assert.ok(workflow.indexOf('node scripts/verify-small-pack-pin.mjs') < workflow.indexOf('node scripts/publish-free-package-set.cjs'), 'validate vendored parser pins before reading or publishing producer packages');
   assert.match(workflow, /dispatch-worker-package-set\.cjs/);
-  assert.match(workflow, /MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: \$\{\{ secrets\.MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN \}\}/);
+  assert.match(workflow, /MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: \$\{\{ secrets\.CODE_LIBRARY_ARTIFACT_READ_TOKEN \}\}/);
   assert.match(workflow, /wait for R2\/D1 promotion/);
   assert.match(workflow, /CODE_LIBRARY_ARTIFACT_READ_TOKEN: \$\{\{ secrets\.CODE_LIBRARY_ARTIFACT_READ_TOKEN \}\}/);
   assert.match(readFileSync(join(ROOT, "scripts", "write-latest-descriptor.mjs"), "utf8"), /legacy full-library latest-descriptor writer is retired/);

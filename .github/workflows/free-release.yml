@@ -367,7 +367,7 @@ jobs:
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_SHA: ${{ github.sha }}
           FREE_PACKAGE_SET_REPORT: free-package-set-report.json
-          MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: ${{ secrets.MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN }}
+          MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: ${{ secrets.CODE_LIBRARY_ARTIFACT_READ_TOKEN }}
         run: node scripts/dispatch-worker-package-set.cjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
