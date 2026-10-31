@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { readFreeUpstream, upstreamTransport } = require('./read-free-upstream.cjs');
 const { publishFreeCandidate } = require('./free-small-package.cjs');
-const { buildCandidateSet, sha256 } = require('./vendor/small-pack/candidate-set.cjs');
+const { buildCandidateSet, canonicalBytes, sha256 } = require('./vendor/small-pack/candidate-set.cjs');
 const row = JSON.parse(fs.readFileSync(new URL('./fixtures/free-small-package/row.json', import.meta.url)));
 const payload = fs.readFileSync(new URL('./fixtures/free-small-package/svg.tgz', import.meta.url));
 const repository = 'moewolf-dev/moe-icons-code-library';
@@ -16,6 +16,10 @@ function fixture() {
   const asset = (name, bytes) => ({ id: id++, name, size: bytes.length, state: 'uploaded', digest: 'sha256:' + sha256(bytes), bytes });
   const controls = [asset('candidate-set.json', built.rootBytes), ...[...built.pageBytesByName].map(([name, bytes]) => asset(name, bytes))];
   const packages = [asset(`${row.packageSha256}.tgz`, payload)];
+  const projection = { schemaVersion: 2, sourceCommit: built.candidateSet.sourceCommit, sourceVersion: '1.0.0', sourceContentHash: 'c'.repeat(64), sourceIndexSha256: 'd'.repeat(64), sourceProducer: { runId: '12', runAttempt: 1 }, sourceReleaseAttempt: 1, generatorCommit: built.candidateSet.generatorCommit, producer: { runId: '20', runAttempt: 1 }, candidateSets: { free: built.candidateSet.packageSetSha256, pro: 'e'.repeat(64) } };
+  const record = { ...projection, recordSha256: sha256(canonicalBytes(projection)) };
+  const execution = { schemaVersion: 1, sourceCommit: projection.sourceCommit, sourceDispatchId, registrySha256: record.recordSha256, producer: { runId: '123', runAttempt: 1, headSha: 'f'.repeat(40) }, candidates: { free: { packageSetSha256: projection.candidateSets.free, candidateRootSha256: sha256(built.rootBytes), candidateRootBytes: built.rootBytes.length }, pro: { packageSetSha256: projection.candidateSets.pro, candidateRootSha256: 'd'.repeat(64), candidateRootBytes: 10 } } };
+  const registry = [asset('source-candidate.json', canonicalBytes(record)), asset('execution-123-1.json', canonicalBytes(execution))];
   const transport = { async api(route) {
     routes.push(route);
     if (!route) return { full_name: repository, private: !flags.public, default_branch: 'main' };
@@ -27,17 +31,42 @@ function fixture() {
       const jobs = flags.jobs || defaultJobs;
       return { total_count: jobs.length, jobs: page === 1 ? jobs : [] };
     }
-    if (route.startsWith('actions/')) return { id: 123, run_attempt: flags.wrongAttempt ? 2 : 1, head_sha: built.candidateSet.generatorCommit, head_branch: 'main', event: 'workflow_dispatch', path: '.github/workflows/small-pack-candidate.yml', display_title: flags.displayTitle || `Source package-set ${built.candidateSet.sourceCommit} ${sourceDispatchId}`, repository: { full_name: repository }, head_repository: { full_name: flags.fork ? 'fork/other' : repository }, status: 'completed', conclusion: 'failure' };
+    if (route.startsWith('actions/')) return { id: 123, run_attempt: flags.wrongAttempt ? 2 : 1, head_sha: flags.reused ? 'f'.repeat(40) : built.candidateSet.generatorCommit, head_branch: 'main', event: 'workflow_dispatch', path: '.github/workflows/small-pack-candidate.yml', display_title: flags.displayTitle || `Source package-set ${built.candidateSet.sourceCommit} ${sourceDispatchId}`, repository: { full_name: repository }, head_repository: { full_name: flags.fork ? 'fork/other' : repository }, status: 'completed', conclusion: 'failure' };
     if (route.startsWith('releases/tags/')) {
-      const tag = route.slice('releases/tags/'.length); assert.match(tag, /^(candidate-set-v1-free-[a-f0-9]{64}|packages-v1-free-[a-f0-9]{2})$/);
-      return { id: tag.startsWith('candidate-') ? 1 : 2, tag_name: tag, draft: false, prerelease: true };
+      const tag = route.slice('releases/tags/'.length); assert.match(tag, /^(candidate-set-v1-free-[a-f0-9]{64}|candidate-source-v2-[a-f0-9]{40}|packages-v1-free-[a-f0-9]{2})$/);
+      return { id: tag.startsWith('candidate-source') ? 3 : tag.startsWith('candidate-') ? 1 : 2, tag_name: tag, draft: false, prerelease: true };
     }
     if (route.startsWith('releases/1/assets')) return controls;
     if (route.startsWith('releases/2/assets')) return packages;
+    if (route.startsWith('releases/3/assets')) return registry;
     throw Error('unexpected route');
   }, async download(a, maximum) { downloads.push(a.name); assert.equal(maximum, a.size); return flags.corrupt === a.name ? Buffer.alloc(a.size) : a.bytes; } };
-  return { binding: built.candidateSet, sourceDispatchId, producer: { runId: '123', runAttempt: 1 }, transport, downloads, routes, controls, packages, flags };
+  return { binding: built.candidateSet, sourceDispatchId, producer: { runId: '123', runAttempt: 1 }, transport, downloads, routes, controls, packages, registry, flags };
 }
+test('reused root requires the registry and exact current execution witness', async () => {
+  const f = fixture(); f.flags.reused = true;
+  await readFreeUpstream(f);
+  assert.ok(f.downloads.includes('execution-123-1.json'));
+  for (const name of ['source-candidate.json', 'execution-123-1.json']) {
+    const invalid = fixture(); invalid.flags.reused = true; invalid.flags.corrupt = name;
+    await assert.rejects(readFreeUpstream(invalid));
+    assert.ok(invalid.downloads.every(item => item.endsWith('.json')));
+  }
+  const missing = fixture(); missing.flags.reused = true; missing.registry.pop();
+  await assert.rejects(readFreeUpstream(missing), /missing\/ambiguous/);
+  for (const mutate of [
+    witness => { witness.producer.headSha = '1'.repeat(40); },
+    witness => { witness.sourceDispatchId = '2'.repeat(64); },
+    witness => { witness.candidates.free.candidateRootSha256 = '3'.repeat(64); },
+    witness => { witness.registrySha256 = '4'.repeat(64); },
+  ]) {
+    const forged = fixture(); forged.flags.reused = true;
+    const entry = forged.registry[1], witness = JSON.parse(entry.bytes); mutate(witness);
+    entry.bytes = canonicalBytes(witness); entry.size = entry.bytes.length; entry.digest = `sha256:${sha256(entry.bytes)}`;
+    await assert.rejects(readFreeUpstream(forged));
+    assert.ok(forged.downloads.every(item => item.endsWith('.json')));
+  }
+});
 test('metadata-only read binds original successful producer stages and streams only selected Free package into public engine', async () => {
   const f = fixture(); const upstream = await readFreeUpstream(f);
   assert.ok(f.downloads.every(name => name.endsWith('.json')));

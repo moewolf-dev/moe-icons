@@ -360,23 +360,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           MOEICONS_AUTO_RELEASE_ENABLED: ${{ vars.MOEICONS_AUTO_RELEASE_ENABLED }}
         run: node scripts/publish-free-package-set.cjs
-      - name: Dispatch exact Free package set to Worker and wait for R2/D1 promotion
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
-          GITHUB_SHA: ${{ github.sha }}
-          FREE_PACKAGE_SET_REPORT: free-package-set-report.json
-          MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN: ${{ secrets.MOEICONS_WORKER_PACKAGE_SET_DISPATCH_TOKEN }}
-        run: node scripts/dispatch-worker-package-set.cjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: worker-package-set-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
-          path: worker-package-set-dispatch.json
-          if-no-files-found: ignore
-          retention-days: 14
-          compression-level: 0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
