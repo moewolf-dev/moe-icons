@@ -41,18 +41,40 @@ async function boundedBody(response, maximum) {
   } catch (error) { try { await response.body?.cancel(); } catch {} throw error; }
 }
 
-function githubFreeStore({ token, publicCommit, fetchImpl = globalThis.fetch }) {
+function githubFreeStore({ token, publicCommit, fetchImpl = globalThis.fetch, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
   assert(typeof token === 'string' && token.length > 0 && !/[\r\n]/.test(token), 'public release token required');
   assert(/^[a-f0-9]{40}$/.test(publicCommit || ''), 'exact public repository commit required');
   const base = `https://api.github.com/repos/${REPOSITORY}`;
   const headers = { Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'moe-icons-free-small-packages' };
-  async function request(url, options, maximum) {
-    let response;
-    try { response = await fetchImpl(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(120000) }); }
-    catch { throw Error('github-free-store: request failed'); }
-    if (!response.ok) { await response.body?.cancel(); throw Object.assign(Error(`github-free-store: HTTP ${response.status}`), { status: response.status }); }
-    try { return await boundedBody(response, maximum); }
-    catch (error) { try { await response.body?.cancel(); } catch {} throw error; }
+  // GitHub answered 500 during the 0.0.29 Free publication and the whole
+  // package-set run failed. Reads are idempotent, so retry 5xx/429 reads with a
+  // bounded backoff; writes are never retried here (the caller's create path
+  // already reconciles an existing object).
+  const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+  const MAX_REQUEST_ATTEMPTS = 4;
+  async function request(url, options = {}, maximum) {
+    const method = String(options.method || 'GET').toUpperCase();
+    const attempts = method === 'GET' || method === 'HEAD' ? MAX_REQUEST_ATTEMPTS : 1;
+    let lastError;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      let response;
+      try {
+        response = await fetchImpl(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(120000) });
+      } catch (error) {
+        lastError = error instanceof Error && error.message ? error : Error('github-free-store: request failed');
+        if (attempt < attempts) { await sleep(Math.min(500 * 2 ** (attempt - 1), 8000)); continue; }
+        throw lastError;
+      }
+      if (response.ok) {
+        try { return await boundedBody(response, maximum); }
+        catch (error) { try { await response.body?.cancel(); } catch {} throw error; }
+      }
+      await response.body?.cancel();
+      lastError = Object.assign(Error(`github-free-store: HTTP ${response.status}`), { status: response.status });
+      if (!RETRYABLE_STATUS.has(response.status) || attempt === attempts) throw lastError;
+      await sleep(Math.min(500 * 2 ** (attempt - 1), 8000));
+    }
+    throw lastError;
   }
   async function api(route, method = 'GET', body) {
     const bytes = await request(base + (route ? '/' + route : ''), { method, headers: { ...headers, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) }, 1024 ** 2);
